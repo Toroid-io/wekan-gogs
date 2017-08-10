@@ -1,0 +1,23 @@
+/* This script creates an initial DB, with default configurations */
+
+CREATE TABLE 'repos' (
+	'repoId'	integer,
+	'boardId'	varchar,
+	PRIMARY KEY(repoId)
+);
+
+CREATE TABLE 'cards' (
+	'issueId'	integer,
+	'cardId'	varchar,
+	'boardId'	varchar,
+	'listId'	varchar,
+	PRIMARY KEY(issueId)
+);
+
+CREATE TABLE 'cards_prio' (
+	'issueId'	integer,
+	'cardId'	varchar,
+	'boardId'	varchar,
+	'listId'	varchar,
+	PRIMARY KEY(issueId)
+);
