@@ -1,5 +1,8 @@
 var request = require('request');
 
+var adminId = null;
+var adminToken = null;
+
 var setupPrioBoard = function() {
     wekan.Boards.get(function(err, boards) {
         if (err != null) {
@@ -57,10 +60,10 @@ var addToBody = function(url, data) {
         url: wekan.baseUrl+url,
         json: true,
         headers: {
-            'Authorization': 'Bearer '+wekan.adminToken
+            'Authorization': 'Bearer '+adminToken
         },
         body: {
-            userId: wekan.adminId
+            userId: adminId
         }
     };
 
@@ -74,15 +77,13 @@ var addToBody = function(url, data) {
 }
 
 var wekan = {
-    adminId: null,
-    adminToken: null,
     prioBoardId: null,
     prioBacklogListId: null,
     Boards: {
         create: function(title, callback) {
             var opts = addToBody('/api/boards', {
                 title: title,
-                owner: wekan.adminId
+                owner: adminId
             });
             request.post(opts, function(err, res, body) {
                 if (err != null) {
@@ -93,7 +94,7 @@ var wekan = {
             });
         },
         get: function(callback) {
-            var opts = addToBody('/api/users/'+wekan.adminId+'/boards', {});
+            var opts = addToBody('/api/users/'+adminId+'/boards', {});
             request.get(opts, function(err, res, body) {
                 if (err != null) {
                     callback(err, null);
@@ -132,7 +133,7 @@ var wekan = {
             listId, callback) {
                 var opts = addToBody('/api/boards/'+boardId+'/lists/'+listId+'/cards', {
                     title: title,
-                    authorId: wekan.adminId,
+                    authorId: adminId,
                     description: description
                 });
                 request.post(opts, function(err, res, body) {
@@ -156,7 +157,7 @@ var wekan = {
     }
 }
 
-module.exports = function(baseUrl, user, pass, callback) {
+module.exports = function(baseUrl, user, pass) {
     wekan.baseUrl = baseUrl;
     // We need to save the new token each time we login
     request.post({
@@ -168,15 +169,13 @@ module.exports = function(baseUrl, user, pass, callback) {
         json: true
     }, function (err, res, body) {
         if (err == null && body.token) {
-            wekan.adminToken = body.token;
-            wekan.adminId = body.id;
+            adminToken = body.token;
+            adminId = body.id;
             setupPrioBoard();
-            callback(null, wekan);
         } else {
             console.log('Error getting admin token!');
-            callback('error', null);
         }
     });
 
-    return null;
+    return wekan;
 };
