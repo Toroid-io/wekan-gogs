@@ -15,23 +15,83 @@ var db = new sqlite3.Database('gogsWekan.db',
 db.serialize(); //sticky
 
 var wekan, gogs;
-require('./wekan.js')('http://localhost:8002',
-    'am',
-    'G2~)4%735tjiA@85(|S9a@RTp',
-    function(err, _wekan) {
-        if (err != null) {
-            coonsole.log('Error initializing wekan module');
-            process.exit(1);
-        }
-        wekan = _wekan;
-        gogs = require('./gogs.js')(
-            'http://localhost:8001',
-            db,
-            wekan
-        );
-    });
 
-var port = 7654;
+var init = function(gurl, gusr, gpass, gtoken, wurl, wusr, wpass) {
+    require('./wekan.js')(wurl, wusr, wpass,
+        function(err, _wekan) {
+            if (err != null) {
+                console.log('Error initializing wekan module');
+                process.exit(1);
+            }
+            wekan = _wekan;
+            gogs = require('./gogs.js')(gurl, gusr, gpass, gtoken, db, wekan);
+        });
+};
+
+// Get usr && pass from database, or prompt user input
+db.get('SELECT * FROM auth', function(err, row) {
+    if (err == null && row != undefined) {
+        // Full info in database
+        console.log('Found credentials in database!');
+        init(row.gogs_url, null,
+            null, row.gogs_token,
+            row.wekan_url, row.wekan_username,
+            row.wekan_password);
+    } else {
+        // Missing data, prompt user input
+        var prompt = require('prompt');
+        var schema = {
+            properties: {
+                gogs_url: {
+                    required: true
+                },
+                gogs_username: {
+                    required: true
+                },
+                gogs_password: {
+                    required: true,
+                    hidden: true
+                },
+                wekan_url: {
+                    required: true
+                },
+                wekan_username: {
+                    required: true
+                },
+                wekan_password: {
+                    required: true,
+                    hidden: true
+                }
+            }
+        };
+        prompt.start();
+        prompt.get(schema, function (err, result) {
+            if (err != null) {
+                console.log('Error reading credentials!');
+                process.exit(1);
+            }
+            db.run('INSERT INTO auth (gogs_url, gogs_username, \
+                gogs_password, wekan_url, wekan_username, \
+                wekan_password) VALUES \
+                (?,?,?,?,?,?)', result.gogs_url,
+                result.gogs_username,
+                result.gogs_password,
+                result.wekan_url,
+                result.wekan_username,
+                result.wekan_password);
+
+            init(result.gogs_url,
+                result.gogs_username,
+                result.gogs_password,
+                null,
+                result.wekan_url,
+                result.wekan_username,
+                result.wekan_password);
+        });
+    }
+});
+
+const port = 7654;
 var app = express();
 
 app.use(morgan('dev')); //Logging
@@ -45,7 +105,6 @@ app.post('/gogs/priority', function (req, res) {
 
 app.post('/gogs', function (req, res) {
     //gogs.parseHook(req.body);
-    console.log(req.body.issue.labels);
     res.status(200).send('OK');
 });
 

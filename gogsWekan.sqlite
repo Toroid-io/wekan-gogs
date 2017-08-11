@@ -1,5 +1,16 @@
 /* This script creates an initial DB, with default configurations */
 
+CREATE TABLE 'auth' (
+	'gogs_url'		varchar,
+	'gogs_username'		varchar,
+	'gogs_password'		varchar,
+	'gogs_token'		varchar,
+	'wekan_url'		varchar,
+	'wekan_username'	varchar,
+	'wekan_password'	varchar,
+	PRIMARY KEY(gogs_username)
+);
+
 CREATE TABLE 'repos' (
 	'repoId'	integer,
 	'boardId'	varchar,

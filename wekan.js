@@ -122,7 +122,6 @@ var wekan = {
                 if (err != null) {
                     callback(err, null);
                 } else {
-                    console.log('lists:', body);
                     callback(null, body);
                 }
             });
@@ -159,6 +158,7 @@ var wekan = {
 
 module.exports = function(baseUrl, user, pass, callback) {
     wekan.baseUrl = baseUrl;
+    // We need to save the new token each time we login
     request.post({
         url: wekan.baseUrl+'/users/login',
         body: {
@@ -173,7 +173,7 @@ module.exports = function(baseUrl, user, pass, callback) {
             setupPrioBoard();
             callback(null, wekan);
         } else {
-            console.log('Error getting admin token: ');
+            console.log('Error getting admin token!');
             callback('error', null);
         }
     });

@@ -2,6 +2,39 @@ var request = require('request');
 var wekan = null;
 var db = null;
 
+var addToBody = function(url, data) {
+    var options = {
+        url: gogs.baseUrl+'/api/v1'+url,
+        json: true,
+        headers: {
+            'Authorization': 'token '+gogs.token
+        },
+        body: {}
+    };
+
+    for (var k in data) {
+        if (data.hasOwnProperty(k)) {
+            options.body[k] = data[k];
+        }
+    }
+
+    return options;
+}
+
+var initToken = function(gusr, gpass) {
+    var opts = addToBody('/users/'+gusr+'/tokens', {
+        name: 'Gogs2Wekan'
+    });
+    request.post(opts, function(err, res, body) {
+        if (err != null) {
+            console.log('Error setting app token!');
+        } else {
+            gogs.token = body.sha1;
+            gogs.saveToken();
+        }
+    }).auth(gusr, gpass);
+};
+
 var gogs = {
     baseUrl: null,
     parseHookPrio: function(body) {
@@ -157,12 +190,18 @@ var gogs = {
                     callback(true);
                 }
             });
+    },
+    saveToken: function() {
+        db.run('UPDATE auth SET gogs_token = ?', gogs.token);
     }
 };
 
-module.exports = function(baseUrl, _db, _wekan) {
+module.exports = function(baseUrl, user, pass, token, _db, _wekan) {
     gogs.baseUrl = baseUrl;
     db = _db;
     wekan = _wekan;
+    if (user != null) {
+        initToken(user, pass);
+    }
     return gogs;
 };
