@@ -19,6 +19,8 @@ CREATE TABLE 'repos' (
 
 CREATE TABLE 'cards' (
 	'issueId'	integer,
+	'repoName'	varchar,
+	'issueIndex'	integer,
 	'cardId'	varchar,
 	'boardId'	varchar,
 	'listId'	varchar,
@@ -27,8 +29,25 @@ CREATE TABLE 'cards' (
 
 CREATE TABLE 'cards_prio' (
 	'issueId'	integer,
+	'repoName'	varchar,
+	'issueIndex'	integer,
 	'cardId'	varchar,
 	'boardId'	varchar,
 	'listId'	varchar,
 	PRIMARY KEY(issueId)
 );
+
+CREATE TABLE 'boards_prio' (
+	'wekan_userid'		varchar,
+	'prioBoardId'		varchar,
+	'prioBacklogListId'	varchar,
+	PRIMARY KEY(wekan_userid)
+);
+
+CREATE TABLE 'kan_labels' (
+	'id'		integer,
+	'name'		varchar,
+	'color'		varchar,
+	PRIMARY KEY(id)
+);
+

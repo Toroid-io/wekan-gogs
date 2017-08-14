@@ -4,7 +4,80 @@ var wekanc = null;
 var gogsc = null;
 var db = null;
 
+var prioBoardId = null;
+var prioBacklogListId = null;
+
 var w2g = {
+    wekan: {
+        setupPrioBoard: function(callback) {
+            w2g.wekan.prioBoardExists(wekanc.adminId, function(err, row) {
+                if (err) {
+                    callback(err);
+                } else if (!row || !row.prioBoardId) {
+                    // Create board
+                    wekanc.Boards.create('Priority', function(err, boardId) {
+                        if (err != null) {
+                            console.log('Error creating priority board!');
+                            return;
+                        } else {
+                            // Create list
+                            wekanc.Lists.create('To Do', boardId,
+                                function(err, listId) {
+                                    if (err != null) {
+                                        console.log('Error creating To Do list!');
+                                        // TODO: Delete board created?
+                                    } else {
+                                        prioBoardId = boardId;
+                                        prioBacklogListId = listId;
+                                        w2g.wekan.insertPrioBoard(wekanc.adminId,
+                                            boardId, listId);
+                                    }
+                                });
+                        }
+                    });
+                } else if (!row.prioBacklogListId) {
+                    // Create list
+                    wekanc.Lists.create('To Do', row.prioBoardId,
+                        function(err, listId) {
+                            if (err != null) {
+                                console.log('Error creating To Do list!');
+                                callback('Error creating To Do list!');
+                            } else {
+                                prioBoardId = row.prioBoardId;
+                                prioBacklogListId = listId;
+                                w2g.wekan.updatePrioBoard(wekanc.adminId,
+                                    row.prioBoardId, listId);
+                            }
+                        });
+                } else {
+                    // Just save the reference
+                    prioBoardId = row.prioBoardId;
+                    prioBacklogListId = row.prioBacklogListId;
+                }
+            });
+        },
+        prioBoardExists: function(user, callback) {
+            db.get('SELECT * FROM boards_prio WHERE wekan_userid = ?',
+                user, function(err, row) {
+                    if (err != null) {
+                        callback(err, null);
+                    } else {
+                        callback(null, row);
+                    }
+                });
+        },
+        insertPrioBoard: function(userId, boardId, listId) {
+            db.run('INSERT INTO boards_prio VALUES (?,?,?)',
+                userId,
+                boardId,
+                listId);
+        },
+        updatePrioBoard: function(userId, boardId, listId) {
+            db.run('UPDATE boards_prio SET prioBoardId = ?, \
+                prioBacklogListId = ? WHERE wekan_userid = ?',
+                boardId, listId, userId);
+        }
+    },
     gogs: {
         parseHookPrio: function(body) {
             if (body.issue && body.action === 'label_updated') {
@@ -27,8 +100,8 @@ var w2g = {
             w2g.getPrioCard(issue.id, function(err, card){
                 if (err != null && has_prio) {
                     // Create card
-                    var boardId = wekanc.prioBoardId;
-                    var listId = wekanc.prioBacklogListId;
+                    var boardId = prioBoardId;
+                    var listId = prioBacklogListId;
                     wekanc.Cards.create(issue.title,
                         issue.body,
                         boardId,
@@ -178,7 +251,12 @@ module.exports = function(callback) {
     db.serialize(); //sticky
 
     var init = function(gurl, gusr, gpass, gtoken, wurl, wusr, wpass) {
-        wekanc = require('./wekan_client.js')(wurl, wusr, wpass);
+        wekanc = require('./wekan_client.js')(wurl, wusr, wpass,
+            function(err) {
+                if (!err) {
+                    w2g.wekan.setupPrioBoard(function(err) {/* TODO */});
+                }
+            });
         gogsc = require('./gogs_client.js')(gurl, gusr, gpass, gtoken);
         if (!wekanc) {
             callback('Error initializing wekan client!');

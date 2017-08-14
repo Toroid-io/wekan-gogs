@@ -1,69 +1,14 @@
 var request = require('request');
 
-var adminId = null;
-var adminToken = null;
-
-var setupPrioBoard = function() {
-    wekan.Boards.get(function(err, boards) {
-        if (err != null) {
-            console.log('Error Boards.get setupPrioBoards');
-            return;
-        }
-        boards.forEach(function(el) {
-            if (el.title === 'Priority') {
-                wekan.prioBoardId = el._id;
-                wekan.Lists.get(el._id, function(err, lists) {
-                    lists.forEach(function(el) {
-                        if (el.title == 'To Do') {
-                            wekan.prioBacklogListId = el._id;
-                        }
-                    });
-                    if (wekan.prioBacklogListId === null) {
-                        // Create Backlog List
-                        wekan.Lists.create('To Do', wekan.prioBoardId,
-                            function(err, listId) {
-                                if (err != null) {
-                                    console.log('Error creating To Do list!');
-                                    return;
-                                } else {
-                                    wekan.prioBacklogListId = listId;
-                                }
-                            });
-                    }
-                });
-            }
-        });
-        if (wekan.prioBoardId === null) {
-            wekan.Boards.create('Priority', function(err, boardId) {
-                if (err != null) {
-                    console.log('Error creating priority board!');
-                    return;
-                } else {
-                    wekan.prioBoardId = boardId;
-                    // Create Backlog List
-                    wekan.Lists.create('To Do', boardId,
-                        function(err, listId) {
-                            if (err != null) {
-                                console.log('Error creating To Do list!');
-                            } else {
-                                wekan.prioBacklogListId = listId;
-                            }
-                        });
-                }
-            });
-        }
-    });
-};
-
 var addToBody = function(url, data) {
     var options = {
         url: wekan.baseUrl+url,
         json: true,
         headers: {
-            'Authorization': 'Bearer '+adminToken
+            'Authorization': 'Bearer '+wekan.adminToken
         },
         body: {
-            userId: adminId
+            userId: wekan.adminId
         }
     };
 
@@ -77,13 +22,13 @@ var addToBody = function(url, data) {
 }
 
 var wekan = {
-    prioBoardId: null,
-    prioBacklogListId: null,
+    adminId: null,
+    adminToken: null,
     Boards: {
         create: function(title, callback) {
             var opts = addToBody('/api/boards', {
                 title: title,
-                owner: adminId
+                owner: wekan.adminId
             });
             request.post(opts, function(err, res, body) {
                 if (err != null) {
@@ -94,7 +39,7 @@ var wekan = {
             });
         },
         get: function(callback) {
-            var opts = addToBody('/api/users/'+adminId+'/boards', {});
+            var opts = addToBody('/api/users/'+wekan.adminId+'/boards', {});
             request.get(opts, function(err, res, body) {
                 if (err != null) {
                     callback(err, null);
@@ -133,7 +78,7 @@ var wekan = {
             listId, callback) {
                 var opts = addToBody('/api/boards/'+boardId+'/lists/'+listId+'/cards', {
                     title: title,
-                    authorId: adminId,
+                    authorId: wekan.adminId,
                     description: description
                 });
                 request.post(opts, function(err, res, body) {
@@ -157,7 +102,7 @@ var wekan = {
     }
 }
 
-module.exports = function(baseUrl, user, pass) {
+module.exports = function(baseUrl, user, pass, callback) {
     wekan.baseUrl = baseUrl;
     // We need to save the new token each time we login
     request.post({
@@ -169,11 +114,12 @@ module.exports = function(baseUrl, user, pass) {
         json: true
     }, function (err, res, body) {
         if (err == null && body.token) {
-            adminToken = body.token;
-            adminId = body.id;
-            setupPrioBoard();
+            wekan.adminToken = body.token;
+            wekan.adminId = body.id;
+            callback(null);
         } else {
             console.log('Error getting admin token!');
+            callback('Error getting admin token!');
         }
     });
 

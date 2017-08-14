@@ -40,6 +40,65 @@ var gogs = {
                 }
             }).auth(gogs.user, gogs.pass);
         }
+    },
+    Labels: {
+        getAllLabels: function(repoName, callback) {
+            var opts = addToBody('/repos/'+gogs.user+'/'+repoName+'/labels', {});
+            request.get(opts, function(err, res, body) {
+                if (err != null) {
+                    callbak(err, null);
+                } else {
+                    callback(null, body);
+                }
+            });
+        },
+        getIssueLabels: function(repoName, issueId, callback) {
+            var opts = addToBody('/repos/'+gogs.user+'/'+repoName+'/issues/'+issueId+'/labels', {});
+            request.get(opts, function(err, res, body) {
+                if (err != null) {
+                    callbak(err, null);
+                } else {
+                    callback(null, body);
+                }
+            });
+        },
+        createLabel: function(repoName, labelName, labelColor, callback) {
+            var opts = addToBody('/repos/'+gogs.user+'/'+repoName+'/labels', {
+                name: labelName,
+                color: labelColor
+            });
+            request.post(opts, function(err, res, body) {
+                if (err != null) {
+                    callbak(err, null);
+                } else {
+                    callback(null, body);
+                }
+            });
+        },
+        addIssueLabels: function(repoName, issueIndex, labels, callback) {
+            var opts = addToBody('/repos/'+gogs.user+'/'+repoName+
+                '/issues/'+issueIndex+'/labels', {
+                    labels: labels
+            });
+            request.post(opts, function(err, res, body) {
+                if (err != null) {
+                    callbak(err, null);
+                } else {
+                    callback(null, body);
+                }
+            });
+        },
+        deleteIssueLabel: function(repoName, issueIndex, labelId, callback) {
+            var opts = addToBody('/repos/'+gogs.user+'/'+repoName+
+                '/issues/'+issueIndex+'/labels/'+labelId, {});
+            request.delete(opts, function(err, res, body) {
+                if (err != null) {
+                    callbak(err, null);
+                } else {
+                    callback(null, body);
+                }
+            });
+        }
     }
 };
 
