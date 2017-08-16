@@ -24,6 +24,18 @@ var gogs = {
     user: null,
     pass: null,
     token: null,
+    Repos: {
+        listMyRepos: function(callback) {
+            var opts = addToBody('/user/repos', {});
+            request.get(opts, function(err, res, body) {
+                if (err != null) {
+                    callback(err, null);
+                } else {
+                    callback(null, body);
+                }
+            });
+        },
+    },
     Users: {
         createToken: function(appName, callback) {
             if (!gogs.user || !gogs.pass) {
@@ -79,7 +91,7 @@ var gogs = {
             var opts = addToBody('/repos/'+gogs.user+'/'+repoName+
                 '/issues/'+issueIndex+'/labels', {
                     labels: labels
-            });
+                });
             request.post(opts, function(err, res, body) {
                 if (err != null) {
                     callbak(err, null);
