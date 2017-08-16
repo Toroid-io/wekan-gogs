@@ -34,7 +34,19 @@ var gogs = {
                     callback(null, body);
                 }
             });
-        },
+        }
+    },
+    Webhooks: {
+        listWebhooks: function(user, repoName, callback) {
+            var opts = addToBody('/repos/'+user+'/'+repoName+'/hooks', {});
+            request.get(opts, function(err, res, body) {
+                if (err != null) {
+                    callback(err, null);
+                } else {
+                    callback(null, body);
+                }
+            });
+        }
     },
     Users: {
         createToken: function(appName, callback) {
