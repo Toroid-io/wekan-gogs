@@ -85,7 +85,7 @@ var gogs = {
                 }
             });
         },
-        deleteWebhook: function(username, repoName, hookId callback) {
+        deleteWebhook: function(username, repoName, hookId, callback) {
             var opts = addToBody('/repos/'+username+'/'+repoName+'/hooks/'+hookId, {});
             request.post(opts, function(err, res, body) {
                 if (err != null) {

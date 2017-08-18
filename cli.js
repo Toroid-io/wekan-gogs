@@ -58,7 +58,7 @@ vorpal
                                 if (!exists) {
                                     w2g.insertRepo(repo.id,
                                         repoFullName,
-                                        null, /* TODO: BOARDID */
+                                        w2g.prioBoardId, /* Just in case */
                                         null,
                                         null,
                                         null,
@@ -68,6 +68,18 @@ vorpal
                                 w2g.updateRepo('repoFullName', repoFullName, updateKey, 'X');
                                 updateKey = args.options.priority?'hook_prioId':'hookId';
                                 w2g.updateRepo('repoFullName', repoFullName, updateKey, hook.id);
+                                if (!args.options.priority) {
+                                    w2g.wekanc.Boards.create(repoFullName, function(err, boardId) {
+                                        if (err) {
+                                            console.log('Error creating board in Wekan');
+                                            callback();
+                                            //TODO: Clean
+                                        }
+                                        updateKey = 'boardId';
+                                        w2g.updateRepo('repoFullName', repoFullName, updateKey, boardId);
+                                        callback();
+                                    });
+                                }
                                 callback();
                             });
                     }

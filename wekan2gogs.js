@@ -1,11 +1,9 @@
 var sqlite3 = require('sqlite3');
 
-
-var prioBoardId = null;
-var prioBacklogListId = null;
-
 var w2g = {
     url: null,
+    prioBoardId: null,
+    prioBacklogListId: null,
     wekanc: null,
     gogsc: null,
     db: null,
@@ -28,8 +26,8 @@ var w2g = {
                                         console.log('Error creating To Do list!');
                                         // TODO: Delete board created?
                                     } else {
-                                        prioBoardId = boardId;
-                                        prioBacklogListId = listId;
+                                        w2g.prioBoardId = boardId;
+                                        w2g.prioBacklogListId = listId;
                                         w2g.wekan.insertPrioBoard(w2g.wekanc.adminId,
                                             boardId, listId);
                                     }
@@ -44,16 +42,16 @@ var w2g = {
                                 console.log('Error creating To Do list!');
                                 callback('Error creating To Do list!');
                             } else {
-                                prioBoardId = row.prioBoardId;
-                                prioBacklogListId = listId;
+                                w2g.prioBoardId = row.prioBoardId;
+                                w2g.prioBacklogListId = listId;
                                 w2g.wekan.updatePrioBoard(w2g.wekanc.adminId,
                                     row.prioBoardId, listId);
                             }
                         });
                 } else {
                     // Just save the reference
-                    prioBoardId = row.prioBoardId;
-                    prioBacklogListId = row.prioBacklogListId;
+                    w2g.prioBoardId = row.prioBoardId;
+                    w2g.prioBacklogListId = row.prioBacklogListId;
                 }
             });
         },
@@ -101,8 +99,8 @@ var w2g = {
             w2g.getPrioCard(issue.id, function(err, card){
                 if (err != null && has_prio) {
                     // Create card
-                    var boardId = prioBoardId;
-                    var listId = prioBacklogListId;
+                    var boardId = w2g.prioBoardId;
+                    var listId = w2g.prioBacklogListId;
                     w2g.wekanc.Cards.create(issue.title,
                         issue.body,
                         boardId,
