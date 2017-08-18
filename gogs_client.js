@@ -34,12 +34,60 @@ var gogs = {
                     callback(null, body);
                 }
             });
+        },
+        getRepo: function(username, repoName, callback) {
+            var opts = addToBody('/repos/'+username+'/'+repoName, {});
+            request.get(opts, function(err, res, body) {
+                if (err != null) {
+                    callback(err, null);
+                } else {
+                    callback(null, body);
+                }
+            });
         }
     },
     Webhooks: {
         listWebhooks: function(user, repoName, callback) {
             var opts = addToBody('/repos/'+user+'/'+repoName+'/hooks', {});
             request.get(opts, function(err, res, body) {
+                if (err != null) {
+                    callback(err, null);
+                } else {
+                    callback(null, body);
+                }
+            });
+        },
+        // Dafaults to gogs type, json payload
+        createWebhook: function(user, repoName, url, callback) {
+            var opts = addToBody('/repos/'+user+'/'+repoName+'/hooks', {
+                type: 'gogs',
+                config: {
+                    url: url,
+                    content_type: 'json'
+                },
+                events: [
+                    'create',
+                    'delete',
+                    'fork',
+                    'push',
+                    'issues',
+                    'issue_comment',
+                    'pull_request',
+                    'release',
+                ],
+                active: true
+            });
+            request.post(opts, function(err, res, body) {
+                if (err != null) {
+                    callback(err, null);
+                } else {
+                    callback(null, body);
+                }
+            });
+        },
+        deleteWebhook: function(username, repoName, hookId callback) {
+            var opts = addToBody('/repos/'+username+'/'+repoName+'/hooks/'+hookId, {});
+            request.post(opts, function(err, res, body) {
                 if (err != null) {
                     callback(err, null);
                 } else {

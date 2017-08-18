@@ -1,27 +1,28 @@
 var sqlite3 = require('sqlite3');
 
-var wekanc = null;
-var gogsc = null;
-var db = null;
 
 var prioBoardId = null;
 var prioBacklogListId = null;
 
 var w2g = {
+    url: null,
+    wekanc: null,
+    gogsc: null,
+    db: null,
     wekan: {
         setupPrioBoard: function(callback) {
-            w2g.wekan.prioBoardExists(wekanc.adminId, function(err, row) {
+            w2g.wekan.prioBoardExists(w2g.wekanc.adminId, function(err, row) {
                 if (err) {
                     callback(err);
                 } else if (!row || !row.prioBoardId) {
                     // Create board
-                    wekanc.Boards.create('Priority', function(err, boardId) {
+                    w2g.wekanc.Boards.create('Priority', function(err, boardId) {
                         if (err != null) {
                             console.log('Error creating priority board!');
                             return;
                         } else {
                             // Create list
-                            wekanc.Lists.create('To Do', boardId,
+                            w2g.wekanc.Lists.create('To Do', boardId,
                                 function(err, listId) {
                                     if (err != null) {
                                         console.log('Error creating To Do list!');
@@ -29,7 +30,7 @@ var w2g = {
                                     } else {
                                         prioBoardId = boardId;
                                         prioBacklogListId = listId;
-                                        w2g.wekan.insertPrioBoard(wekanc.adminId,
+                                        w2g.wekan.insertPrioBoard(w2g.wekanc.adminId,
                                             boardId, listId);
                                     }
                                 });
@@ -37,7 +38,7 @@ var w2g = {
                     });
                 } else if (!row.prioBacklogListId) {
                     // Create list
-                    wekanc.Lists.create('To Do', row.prioBoardId,
+                    w2g.wekanc.Lists.create('To Do', row.prioBoardId,
                         function(err, listId) {
                             if (err != null) {
                                 console.log('Error creating To Do list!');
@@ -45,7 +46,7 @@ var w2g = {
                             } else {
                                 prioBoardId = row.prioBoardId;
                                 prioBacklogListId = listId;
-                                w2g.wekan.updatePrioBoard(wekanc.adminId,
+                                w2g.wekan.updatePrioBoard(w2g.wekanc.adminId,
                                     row.prioBoardId, listId);
                             }
                         });
@@ -57,7 +58,7 @@ var w2g = {
             });
         },
         prioBoardExists: function(user, callback) {
-            db.get('SELECT * FROM boards_prio WHERE wekan_userid = ?',
+            w2g.db.get('SELECT * FROM boards_prio WHERE wekan_userid = ?',
                 user, function(err, row) {
                     if (err != null) {
                         callback(err, null);
@@ -67,13 +68,13 @@ var w2g = {
                 });
         },
         insertPrioBoard: function(userId, boardId, listId) {
-            db.run('INSERT INTO boards_prio VALUES (?,?,?)',
+            w2g.db.run('INSERT INTO boards_prio VALUES (?,?,?)',
                 userId,
                 boardId,
                 listId);
         },
         updatePrioBoard: function(userId, boardId, listId) {
-            db.run('UPDATE boards_prio SET prioBoardId = ?, \
+            w2g.db.run('UPDATE boards_prio SET prioBoardId = ?, \
                 prioBacklogListId = ? WHERE wekan_userid = ?',
                 boardId, listId, userId);
         }
@@ -102,7 +103,7 @@ var w2g = {
                     // Create card
                     var boardId = prioBoardId;
                     var listId = prioBacklogListId;
-                    wekanc.Cards.create(issue.title,
+                    w2g.wekanc.Cards.create(issue.title,
                         issue.body,
                         boardId,
                         listId, function(err, cardId) {
@@ -118,7 +119,7 @@ var w2g = {
                 } else if (err == null && !has_prio) {
                     console.log(card);
                     // Delete card
-                    wekanc.Cards.delete(card.boardId,
+                    w2g.wekanc.Cards.delete(card.boardId,
                         card.listId,
                         card.cardId,
                         function(err, _id){
@@ -134,20 +135,20 @@ var w2g = {
         issue: function(issue) {
             if (issue.action = 'opened') {
                 console.log(issue);
-                w2g.getRepo(issue.repository.id, function(err, repo){
+                w2g.getRepo('repoId', issue.repository.id, function(err, repo){
                     if (err != null) {
                         // Create board
-                        wekanc.Boards.create(issue.repository.full_name, function (err, boardId) {
+                        w2g.wekanc.Boards.create(issue.repository.full_name, function (err, boardId) {
                             if (err != null) {
                             } else {
                                 // Insert repo
                                 w2g.insertRepo(issue.repository.id, boardId);
                                 // Create dummy list
-                                wekanc.Lists.create('Backlog', boardId, function (err, listId) {
+                                w2g.wekanc.Lists.create('Backlog', boardId, function (err, listId) {
                                     if (err != null) {
                                     } else {
                                         // Create card
-                                        wekanc.Cards.create(issue.issue.title,
+                                        w2g.wekanc.Cards.create(issue.issue.title,
                                             issue.issue.body,
                                             boardId, listId, function(err, cardId) {
                                                 if (err != null) {
@@ -165,12 +166,12 @@ var w2g = {
                         });
                     } else {
                         // Get lists
-                        wekanc.Lists.get(repo.boardId, function(err, lists) {
+                        w2g.wekanc.Lists.get(repo.boardId, function(err, lists) {
                             if (err != null || lists.length === 0) {
                             } else {
                                 var listId = lists[0]._id;
                                 // Create card
-                                wekanc.Cards.create(issue.issue.title,
+                                w2g.wekanc.Cards.create(issue.issue.title,
                                     issue.issue.body,
                                     repo.boardId, listId, function(err, cardId) {
                                         if (err != null) {
@@ -190,30 +191,33 @@ var w2g = {
         }
     },
     insertIssue: function(issueId, cardId, boardId, listId) {
-        db.run('INSERT INTO cards (issueId, cardId, boardId, listId) VALUES (?,?,?,?)',
+        w2g.db.run('INSERT INTO cards (issueId, cardId, boardId, listId) VALUES (?,?,?,?)',
             issueId,
             cardId,
             boardId,
             listId);
     },
     insertPrioIssue: function(issueId, cardId, boardId, listId) {
-        db.run('INSERT INTO cards_prio (issueId, cardId, boardId, listId) VALUES (?,?,?,?)',
+        w2g.db.run('INSERT INTO cards_prio (issueId, cardId, boardId, listId) VALUES (?,?,?,?)',
             issueId,
             cardId,
             boardId,
             listId);
     },
     removePrioCard: function(issueId) {
-        db.run('DELETE FROM cards_prio WHERE issueId = ?',
+        w2g.db.run('DELETE FROM cards_prio WHERE issueId = ?',
             issueId);
     },
-    insertRepo: function(repoId, boardId) {
-        db.run('INSERT INTO repos (repoId, boardId) VALUES (?,?)',
-            repoId,
-            boardId);
+    insertRepo: function(repoId, repoFullName, boardId, active, active_prio, hookId, hook_prioId) {
+        w2g.db.run('INSERT INTO repos VALUES (?,?,?,?,?,?,?)',
+            repoId, repoFullName, boardId, active, active_prio, hookId, hook_prioId);
+    },
+    updateRepo: function(searchKey, searchValue, updateKey, updateValue) {
+        w2g.db.run('UPDATE repos SET '+updateKey+' = ? WHERE '+searchKey+' = ?',
+            updateValue, searchValue);
     },
     getPrioCard: function(issueId, callback) {
-        db.get('SELECT * FROM cards_prio WHERE issueId = ?',
+        w2g.db.get('SELECT * FROM cards_prio WHERE issueId = ?',
             issueId,
             function(err, row) {
                 if (err == null && row != undefined) {
@@ -223,9 +227,9 @@ var w2g = {
                 }
             });
     },
-    getRepo: function(repoId, callback) {
-        db.get('SELECT * FROM repos WHERE repoId = ?',
-            repoId,
+    getRepo: function(searchKey, searchValue, callback) {
+        w2g.db.get('SELECT * FROM repos WHERE '+searchKey+' = ?',
+            searchValue,
             function(err, row) {
                 if (err == null && row != undefined) {
                     callback(null, row);
@@ -235,50 +239,75 @@ var w2g = {
             });
     },
     saveGogsToken: function(token) {
-        db.run('UPDATE auth SET gogs_token = ?', token);
-    }
+        w2g.db.run('UPDATE auth SET gogs_token = ?', token);
+    },
+    kanLabels: [
+        {
+            name: 'kan:priority',
+            color: '#FE2E2E'
+        },
+        {
+            name: 'kan:To Do',
+            color: '#c7def8'
+        },
+        {
+            name: 'kan:In Progress',
+            color: '#fca43f'
+        },
+        {
+            name: 'kan:Review',
+            color: '#bf3cfc'
+        },
+        {
+            name: 'kan:Done',
+            color: '#71d658'
+        }
+    ]
 };
 
 module.exports = function(callback) {
     // Create or open DB
-    db = new sqlite3.Database('gogsWekan.db',
+    w2g.db = new sqlite3.Database('gogsWekan.db',
         sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
         function(err) {
             if (err != null) {
                 callback('Error opening gogs database!');
             }
         });
-    db.serialize(); //sticky
+    w2g.db.serialize(); //sticky
 
     var init = function(gurl, gusr, gpass, gtoken, wurl, wusr, wpass) {
-        wekanc = require('./wekan_client.js')(wurl, wusr, wpass,
+        w2g.wekanc = require('./wekan_client.js')(wurl, wusr, wpass,
             function(err) {
                 if (!err) {
                     w2g.wekan.setupPrioBoard(function(err) {/* TODO */});
                 }
             });
-        gogsc = require('./gogs_client.js')(gurl, gusr, gpass, gtoken);
-        if (!wekanc) {
+        w2g.gogsc = require('./gogs_client.js')(gurl, gusr, gpass, gtoken);
+        if (!w2g.wekanc) {
             callback('Error initializing wekan client!');
         }
-        if (!gogsc) {
+        if (!w2g.gogsc) {
             callback('Error initializing gogs client!');
         }
         if (!gtoken) {
-            gogsc.Users.createToken('Wekan2Gogs', function(err, token) {
+            w2g.gogsc.Users.createToken('Wekan2Gogs', function(err, token) {
                 if (err) {
                     callback('Error registering app with gogs!');
                 }
                 w2g.saveGogsToken(token);
             });
         }
+        var cli = require('./cli.js')(w2g);
+        cli.show();
     };
 
     // Get usr && pass from database, or prompt user input
-    db.get('SELECT * FROM auth', function(err, row) {
+    w2g.db.get('SELECT * FROM auth', function(err, row) {
         if (!err && row) {
             // Full info in database
             console.log('Found credentials in database!');
+            w2g.url = row.w2g_url;
             init(row.gogs_url, row.gogs_username,
                 row.gogs_password, row.gogs_token,
                 row.wekan_url, row.wekan_username,
@@ -307,6 +336,9 @@ module.exports = function(callback) {
                     wekan_password: {
                         required: true,
                         hidden: true
+                    },
+                    w2g_url: {
+                        required: true
                     }
                 }
             };
@@ -315,16 +347,18 @@ module.exports = function(callback) {
                 if (err != null) {
                     callback('Error reading credentials!');
                 }
-                db.run('INSERT INTO auth (gogs_url, gogs_username, \
+                w2g.db.run('INSERT INTO auth (gogs_url, gogs_username, \
                 gogs_password, wekan_url, wekan_username, \
-                wekan_password) VALUES \
-                (?,?,?,?,?,?)', result.gogs_url,
+                wekan_password, w2g_url) VALUES \
+                (?,?,?,?,?,?,?)', result.gogs_url,
                     result.gogs_username,
                     result.gogs_password,
                     result.wekan_url,
                     result.wekan_username,
-                    result.wekan_password);
+                    result.wekan_password,
+                    result.w2g_url);
 
+                w2g.url = result.w2g_url;
                 init(result.gogs_url,
                     result.gogs_username,
                     result.gogs_password,

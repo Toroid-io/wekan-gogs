@@ -8,12 +8,18 @@ CREATE TABLE 'auth' (
 	'wekan_url'		varchar,
 	'wekan_username'	varchar,
 	'wekan_password'	varchar,
+	'w2g_url'		varchar,
 	PRIMARY KEY(gogs_username)
 );
 
 CREATE TABLE 'repos' (
 	'repoId'	integer,
+	'repoFullName'	varchar,
 	'boardId'	varchar,
+	'active'	integer,
+	'active_prio'	integer,
+	'hookId'	integer,
+	'hook_prioId'	integer,
 	PRIMARY KEY(repoId)
 );
 
