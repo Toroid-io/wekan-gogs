@@ -16,6 +16,7 @@ CREATE TABLE 'repos' (
 	'repoId'	integer,
 	'repoFullName'	varchar,
 	'boardId'	varchar,
+	'backlogListId'	varchar,
 	'active'	integer,
 	'active_prio'	integer,
 	'hookId'	integer,

@@ -73,10 +73,22 @@ vorpal
                                         if (err) {
                                             console.log('Error creating board in Wekan');
                                             callback();
-                                            //TODO: Clean
+                                            //TODO: Cleanup
                                         }
                                         updateKey = 'boardId';
                                         w2g.updateRepo('repoFullName', repoFullName, updateKey, boardId);
+                                        // Create Backlog List
+                                        w2g.wekanc.Lists.create('To Do', boardId,
+                                            function(err, listId) {
+                                                if (err != null) {
+                                                    console.log('Error creating To Do list!');
+                                                    callback();
+                                                    // TODO: Cleanup
+                                                } else {
+                                                    updateKey = 'backlogListId';
+                                                    w2g.updateRepo('repoFullName', repoFullName, updateKey, listId);
+                                                }
+                                            });
                                         callback();
                                     });
                                 }
