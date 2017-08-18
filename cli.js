@@ -5,7 +5,6 @@ var w2g = null;
 vorpal
     .command('list', 'List repositories')
     .option('-a, --active', 'List only active repositories')
-    .option('-n, --not-active', 'List only not active repositories')
     .action(function(args, callback) {
         var console = this;
         w2g.gogsc.Repos.listMyRepos(function(err, repos) {
@@ -18,7 +17,9 @@ vorpal
                     w2g.getRepo('repoId', repo.id, function(err, row) {
                         active = (!err && row.active)? 'X' : '';
                         prio_active = (!err && row.active_prio)? 'X' : '';
-                        table.push([repo.full_name, active, prio_active]);
+                        if ( ((args.options.active && (active === 'X' || prio_active === 'X')) || !args.options.active) ) {
+                            table.push([repo.full_name, active, prio_active]);
+                        }
                         if (idx_repo === array_repo.length - 1) {
                             console.log(table.toString());
                             callback();
