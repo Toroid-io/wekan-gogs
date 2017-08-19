@@ -87,7 +87,7 @@ var gogs = {
         },
         deleteWebhook: function(username, repoName, hookId, callback) {
             var opts = addToBody('/repos/'+username+'/'+repoName+'/hooks/'+hookId, {});
-            request.post(opts, function(err, res, body) {
+            request.delete(opts, function(err, res, body) {
                 if (err != null) {
                     callback(err, null);
                 } else {
@@ -165,7 +165,7 @@ var gogs = {
                 '/issues/'+issueIndex+'/labels/'+labelId, {});
             request.delete(opts, function(err, res, body) {
                 if (err != null) {
-                    callbak(err, null);
+                    callback(err, null);
                 } else {
                     callback(null, body);
                 }

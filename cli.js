@@ -31,6 +31,52 @@ vorpal
     });
 
 vorpal
+    .command('deactivate <username> <repo>', 'Deactivate repository')
+    .option('-p, --priority', 'Deactivate repo in priority board')
+    .action(function(args, callback) {
+        var console = this;
+        var repoFullName = args.username+'/'+args.repo;
+        w2g.getRepo('repoFullName', repoFullName, function(err, row) {
+            exists = (!err && row);
+            if (exists && row.active_prio && args.options.priority) {
+                w2g.gogsc.Webhooks.deleteWebhook(args.username, args.repo, row.hook_prioId,
+                    function(err, none) {
+                        if (err) {
+                            //TODO: Wat?
+                            console.log('Error deleting webhook');
+                            callback();
+                        }
+                    });
+                w2g.updateRepo('repoId', row.repoId, 'hook_prioId', null);
+                w2g.updateRepo('repoId', row.repoId, 'active_prio', 0);
+                callback();
+            } else if (exists && row.active && !args.options.priority) {
+                w2g.gogsc.Webhooks.deleteWebhook(args.username, args.repo, row.hookId,
+                    function(err, none) {
+                        if (err) {
+                            //TODO: Wat?
+                            console.log('Error deleting webhook');
+                            callback();
+                        }
+                        w2g.updateRepo('repoId', row.repoId, 'hookId', null);
+                        w2g.updateRepo('repoId', row.repoId, 'active', 0);
+                        w2g.wekanc.Boards.delete(row.boardId, function(err, id) {
+                            if (err) {
+                                console.log('Error deleting board');
+                                callback();
+                            }
+                            w2g.updateRepo('repoId', row.repoId, 'boardId', null);
+                            callback();
+                        });
+                    });
+            } else {
+                console.log('Repository is not active');
+                callback();
+            }
+        });
+    });
+
+vorpal
     .command('activate <username> <repo>', 'Activate repository')
     .option('-p, --priority', 'Activate repo in priority board')
     .action(function(args, callback) {
@@ -52,7 +98,6 @@ vorpal
             w2g.gogsc.Webhooks.createWebhook(args.username,
                 args.repo, url, function(err, hook) {
                     if (!err) {
-                        // CREATE BOARD IF NOT PRIORITY
                         w2g.gogsc.Repos.getRepo(args.username,
                             args.repo, function(err, repo) {
                                 // Get repo ID from gogs
@@ -60,13 +105,13 @@ vorpal
                                     w2g.insertRepo(repo.id,
                                         repoFullName,
                                         w2g.prioBoardId, /* Just in case */
-                                        null,
-                                        null,
+                                        0,
+                                        0,
                                         null,
                                         null);
                                 }
                                 var updateKey = args.options.priority?'active_prio':'active';
-                                w2g.updateRepo('repoFullName', repoFullName, updateKey, 'X');
+                                w2g.updateRepo('repoFullName', repoFullName, updateKey, 1);
                                 updateKey = args.options.priority?'hook_prioId':'hookId';
                                 w2g.updateRepo('repoFullName', repoFullName, updateKey, hook.id);
                                 if (!args.options.priority) {
@@ -88,12 +133,13 @@ vorpal
                                                 } else {
                                                     updateKey = 'backlogListId';
                                                     w2g.updateRepo('repoFullName', repoFullName, updateKey, listId);
+                                                    callback();
                                                 }
                                             });
-                                        callback();
                                     });
+                                } else {
+                                    callback();
                                 }
-                                callback();
                             });
                     }
                 });

@@ -47,6 +47,16 @@ var wekan = {
                     callback(null, body);
                 }
             });
+        },
+        delete: function(boardId, callback) {
+            var opts = addToBody('/api/boards/'+boardId, {});
+            request.delete(opts, function(err, res, body) {
+                if (err != null) {
+                    callback(err, null);
+                } else {
+                    callback(null, body._id);
+                }
+            });
         }
     },
     Lists: {
