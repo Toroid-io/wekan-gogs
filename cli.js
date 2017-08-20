@@ -8,7 +8,7 @@ vorpal
     .action(function(args, callback) {
         var console = this;
         w2g.gogsc.Repos.listMyRepos(function(err, repos) {
-            if (!err) {
+            if (!err && repos) {
                 var table = new Table({
                     head: ['Name', 'Active', 'Active (Priority)']
                 });
@@ -26,6 +26,9 @@ vorpal
                         }
                     });
                 });
+            } else {
+                console.log('Error listing repos');
+                callback();
             }
         });
     });
@@ -105,6 +108,7 @@ vorpal
                                     w2g.insertRepo(repo.id,
                                         repoFullName,
                                         w2g.prioBoardId, /* Just in case */
+                                        w2g.prioBacklogListId, /* Just in case */
                                         0,
                                         0,
                                         null,

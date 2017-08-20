@@ -206,9 +206,9 @@ var w2g = {
         w2g.db.run('DELETE FROM cards_prio WHERE issueId = ?',
             issueId);
     },
-    insertRepo: function(repoId, repoFullName, boardId, active, active_prio, hookId, hook_prioId) {
-        w2g.db.run('INSERT INTO repos VALUES (?,?,?,?,?,?,?)',
-            repoId, repoFullName, boardId, active, active_prio, hookId, hook_prioId);
+    insertRepo: function(repoId, repoFullName, boardId, backlogListId, active, active_prio, hookId, hook_prioId) {
+        w2g.db.run('INSERT INTO repos VALUES (?,?,?,?,?,?,?,?)',
+            repoId, repoFullName, boardId, backlogListId, active, active_prio, hookId, hook_prioId);
     },
     updateRepo: function(searchKey, searchValue, updateKey, updateValue) {
         w2g.db.run('UPDATE repos SET '+updateKey+' = ? WHERE '+searchKey+' = ?',
