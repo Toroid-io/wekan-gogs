@@ -114,13 +114,13 @@ var gogs = {
         }
     },
     Labels: {
-        getAllLabels: function(repoName, callback) {
-            var opts = addToBody('/repos/'+gogs.user+'/'+repoName+'/labels', {});
-            request.get(opts, function(err, res, body) {
+        getAll: function(username, repoName, callback) {
+            var opts = addToBody('/repos/'+username+'/'+repoName+'/labels', {});
+            request.get(opts, function(err, res, labels) {
                 if (err != null) {
                     callbak(err, null);
                 } else {
-                    callback(null, body);
+                    callback(null, labels);
                 }
             });
         },
@@ -134,8 +134,8 @@ var gogs = {
                 }
             });
         },
-        createLabel: function(repoName, labelName, labelColor, callback) {
-            var opts = addToBody('/repos/'+gogs.user+'/'+repoName+'/labels', {
+        createLabel: function(username, repoName, labelName, labelColor, callback) {
+            var opts = addToBody('/repos/'+username+'/'+repoName+'/labels', {
                 name: labelName,
                 color: labelColor
             });

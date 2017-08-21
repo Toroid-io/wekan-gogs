@@ -51,10 +51,11 @@ CREATE TABLE 'boards_prio' (
 	PRIMARY KEY(wekan_userid)
 );
 
-CREATE TABLE 'kan_labels' (
+CREATE TABLE 'labels' (
 	'id'		integer,
-	'name'		varchar,
-	'color'		varchar,
+	'repoId'	integer,
+	'labelName'	varchar,
+	'listId'	varchar,
 	PRIMARY KEY(id)
 );
 

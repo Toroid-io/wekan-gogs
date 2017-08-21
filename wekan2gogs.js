@@ -188,6 +188,19 @@ var w2g = {
             }
         }
     },
+    syncLabels: function(username, repoName) {
+        w2g.gogsc.Labels.getAll(username, repoName, function(err, labels) {
+            if (!err) {
+                labels.forEach(function(el) {
+                    w2g.getLabel('labelName', el.name, function(err, row) {
+                        if (!err && row) {
+                            w2g.updateLabel('labelName', el.name, 'id', el.id);
+                        }
+                    });
+                });
+            }
+        });
+    },
     insertIssue: function(issueId, cardId, boardId, listId) {
         w2g.db.run('INSERT INTO cards (issueId, cardId, boardId, listId) VALUES (?,?,?,?)',
             issueId,
@@ -210,9 +223,9 @@ var w2g = {
         w2g.db.run('INSERT INTO repos VALUES (?,?,?,?,?,?,?,?)',
             repoId, repoFullName, boardId, backlogListId, active, active_prio, hookId, hook_prioId);
     },
-    updateRepo: function(searchKey, searchValue, updateKey, updateValue) {
-        w2g.db.run('UPDATE repos SET '+updateKey+' = ? WHERE '+searchKey+' = ?',
-            updateValue, searchValue);
+    updateRepo: function(searchkey, searchvalue, updatekey, updatevalue) {
+        w2g.db.run('UPDATE repos SET '+updatekey+' = ? WHERE '+searchkey+' = ?',
+            updatevalue, searchvalue);
     },
     getPrioCard: function(issueId, callback) {
         w2g.db.get('SELECT * FROM cards_prio WHERE issueId = ?',
@@ -239,28 +252,49 @@ var w2g = {
     saveGogsToken: function(token) {
         w2g.db.run('UPDATE auth SET gogs_token = ?', token);
     },
-    kanLabels: [
-        {
-            name: 'kan:priority',
-            color: '#FE2E2E'
-        },
-        {
+    getLabel: function(searchKey, searchValue, callback) {
+        w2g.db.get('SELECT * FROM labels WHERE '+searchKey+' = ?',
+            searchValue,
+            function(err, row) {
+                if (!err && row) {
+                    callback(null, row);
+                } else {
+                    callback(true);
+                }
+            });
+    },
+    insertLabel: function(id, repoId, labelName, listId) {
+        w2g.db.run('INSERT INTO labels VALUES (?,?,?,?)',
+            id, repoId, labelName, listId);
+    },
+    updateLabel: function(searchKey, searchValue, updateKey, updateValue) {
+        w2g.db.run('UPDATE labels SET '+updateKey+' = ? WHERE '+searchKey+' = ?',
+            updateValue, searchValue);
+    },
+    kanLabels: {
+        todo: {
             name: 'kan:To Do',
             color: '#c7def8'
         },
-        {
-            name: 'kan:In Progress',
-            color: '#fca43f'
-        },
-        {
-            name: 'kan:Review',
-            color: '#bf3cfc'
-        },
-        {
-            name: 'kan:Done',
-            color: '#71d658'
-        }
-    ]
+        others: [
+            {
+                name: 'kan:Priority',
+                color: '#FE2E2E'
+            },
+            {
+                name: 'kan:In Progress',
+                color: '#fca43f'
+            },
+            {
+                name: 'kan:Review',
+                color: '#bf3cfc'
+            },
+            {
+                name: 'kan:Done',
+                color: '#71d658'
+            }
+        ]
+    }
 };
 
 module.exports = function(callback) {

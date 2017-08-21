@@ -17,7 +17,7 @@ vorpal
                     w2g.getRepo('repoId', repo.id, function(err, row) {
                         active = (!err && row.active)? 'X' : '';
                         prio_active = (!err && row.active_prio)? 'X' : '';
-                        if ( ((args.options.active && (active === 'X' || prio_active === 'X')) || !args.options.active) ) {
+                        if ( ((args.options.active && (row.active || row.active_prio)) || !args.options.active) ) {
                             table.push([repo.full_name, active, prio_active]);
                         }
                         if (idx_repo === array_repo.length - 1) {
@@ -49,10 +49,10 @@ vorpal
                             console.log('Error deleting webhook');
                             callback();
                         }
+                        w2g.updateRepo('repoId', row.repoId, 'hook_prioId', null);
+                        w2g.updateRepo('repoId', row.repoId, 'active_prio', 0);
+                        callback();
                     });
-                w2g.updateRepo('repoId', row.repoId, 'hook_prioId', null);
-                w2g.updateRepo('repoId', row.repoId, 'active_prio', 0);
-                callback();
             } else if (exists && row.active && !args.options.priority) {
                 w2g.gogsc.Webhooks.deleteWebhook(args.username, args.repo, row.hookId,
                     function(err, none) {
@@ -82,6 +82,7 @@ vorpal
 vorpal
     .command('activate <username> <repo>', 'Activate repository')
     .option('-p, --priority', 'Activate repo in priority board')
+    .option('-l, --labels', 'Create basic label set')
     .action(function(args, callback) {
         var console = this;
         var url = (args.options.priority)?w2g.url+'/gogs/priority':w2g.url+'/gogs';
@@ -137,7 +138,40 @@ vorpal
                                                 } else {
                                                     updateKey = 'backlogListId';
                                                     w2g.updateRepo('repoFullName', repoFullName, updateKey, listId);
-                                                    callback();
+                                                    // TODO: CREATE LISTS
+                                                    w2g.gogsc.Labels.createLabel(args.username,
+                                                        args.repo, w2g.kanLabels.todo.name,
+                                                        w2g.kanLabels.todo.color, function (err, label) {
+                                                            // Save in DB
+                                                            if (!err) {
+                                                                w2g.insertLabel(null, repo.id, label.name,
+                                                                    listId);
+                                                                if (args.options.labels) {
+                                                                    w2g.kanLabels.others.forEach(function(label, idx_label, array_label) {
+                                                                        w2g.gogsc.Labels.createLabel(args.username,
+                                                                            args.repo, label.name, label.color, function (err, label) {
+                                                                                // Save in DB
+                                                                                if (!err) {
+                                                                                    w2g.insertLabel(null, repo.id, label.name,
+                                                                                        null /* TODO: New List ID */);
+                                                                                } else {
+                                                                                    console.log('Error creating label');
+                                                                                    callback();
+                                                                                }
+                                                                                if (idx_label === array_label.length - 1) {
+                                                                                    w2g.syncLabels(args.username, args.repo);
+                                                                                    callback();
+                                                                                }
+                                                                            });
+                                                                    });
+                                                                } else {
+                                                                    callback();
+                                                                }
+                                                            } else {
+                                                                console.log('Error creating label');
+                                                                callback();
+                                                            }
+                                                        });
                                                 }
                                             });
                                     });
