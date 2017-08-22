@@ -25,40 +25,40 @@ var gogs = {
     pass: null,
     token: null,
     Repos: {
-        listMyRepos: function(callback) {
+        listMyRepos: function(cb) {
             var opts = addToBody('/user/repos', {});
             request.get(opts, function(err, res, body) {
                 if (err != null) {
-                    callback(err, null);
+                    if (cb) cb(err, null);
                 } else {
-                    callback(null, body);
+                    if (cb) cb(null, body);
                 }
             });
         },
-        getRepo: function(username, repoName, callback) {
+        getRepo: function(username, repoName, cb) {
             var opts = addToBody('/repos/'+username+'/'+repoName, {});
             request.get(opts, function(err, res, body) {
                 if (err != null) {
-                    callback(err, null);
+                    if (cb) cb(err, null);
                 } else {
-                    callback(null, body);
+                    if (cb) cb(null, body);
                 }
             });
         }
     },
     Webhooks: {
-        listWebhooks: function(user, repoName, callback) {
+        listWebhooks: function(user, repoName, cb) {
             var opts = addToBody('/repos/'+user+'/'+repoName+'/hooks', {});
             request.get(opts, function(err, res, body) {
                 if (err != null) {
-                    callback(err, null);
+                    if (cb) cb(err, null);
                 } else {
-                    callback(null, body);
+                    if (cb) cb(null, body);
                 }
             });
         },
         // Dafaults to gogs type, json payload
-        createWebhook: function(user, repoName, url, callback) {
+        createWebhook: function(user, repoName, url, cb) {
             var opts = addToBody('/repos/'+user+'/'+repoName+'/hooks', {
                 type: 'gogs',
                 config: {
@@ -79,95 +79,106 @@ var gogs = {
             });
             request.post(opts, function(err, res, body) {
                 if (err != null) {
-                    callback(err, null);
+                    if (cb) cb(err, null);
                 } else {
-                    callback(null, body);
+                    if (cb) cb(null, body);
                 }
             });
         },
-        deleteWebhook: function(username, repoName, hookId, callback) {
+        deleteWebhook: function(username, repoName, hookId, cb) {
             var opts = addToBody('/repos/'+username+'/'+repoName+'/hooks/'+hookId, {});
             request.delete(opts, function(err, res, body) {
                 if (err != null) {
-                    callback(err, null);
+                    if (cb) cb(err, null);
                 } else {
-                    callback(null, body);
+                    if (cb) cb(null, body);
                 }
             });
         }
     },
     Users: {
-        createToken: function(appName, callback) {
+        createToken: function(appName, cb) {
             if (!gogs.user || !gogs.pass) {
-                callback('user/pass not set in client!', null);
+                if (cb) cb('user/pass not set in client!', null);
             }
             var opts = addToBody('/users/'+gogs.user+'/tokens', {
                 name: appName
             });
             request.post(opts, function(err, res, body) {
                 if (err != null) {
-                    callback(err, null);
+                    if (cb) cb(err, null);
                 } else {
-                    callback(null, body.sha1);
+                    if (cb) cb(null, body.sha1);
                 }
             }).auth(gogs.user, gogs.pass);
         }
     },
     Labels: {
-        getAll: function(username, repoName, callback) {
+        getAll: function(username, repoName, cb) {
             var opts = addToBody('/repos/'+username+'/'+repoName+'/labels', {});
             request.get(opts, function(err, res, labels) {
                 if (err != null) {
-                    callbak(err, null);
+                    if (cb) cb(err, null);
                 } else {
-                    callback(null, labels);
+                    if (cb) cb(null, labels);
                 }
             });
         },
-        getIssueLabels: function(repoName, issueId, callback) {
+        getIssueLabels: function(repoName, issueId, cb) {
             var opts = addToBody('/repos/'+gogs.user+'/'+repoName+'/issues/'+issueId+'/labels', {});
             request.get(opts, function(err, res, body) {
                 if (err != null) {
-                    callbak(err, null);
+                    if (cb) cb(err, null);
                 } else {
-                    callback(null, body);
+                    if (cb) cb(null, body);
                 }
             });
         },
-        createLabel: function(username, repoName, labelName, labelColor, callback) {
+        createLabel: function(username, repoName, labelName, labelColor, cb) {
             var opts = addToBody('/repos/'+username+'/'+repoName+'/labels', {
                 name: labelName,
                 color: labelColor
             });
             request.post(opts, function(err, res, body) {
                 if (err != null) {
-                    callbak(err, null);
+                    if (cb) cb(err, null);
                 } else {
-                    callback(null, body);
+                    if (cb) cb(null, body);
                 }
             });
         },
-        addIssueLabels: function(repoName, issueIndex, labels, callback) {
+        addIssueLabels: function(repoName, issueIndex, labels, cb) {
             var opts = addToBody('/repos/'+gogs.user+'/'+repoName+
                 '/issues/'+issueIndex+'/labels', {
                     labels: labels
                 });
             request.post(opts, function(err, res, body) {
                 if (err != null) {
-                    callbak(err, null);
+                    if (cb) cb(err, null);
                 } else {
-                    callback(null, body);
+                    if (cb) cb(null, body);
                 }
             });
         },
-        deleteIssueLabel: function(repoName, issueIndex, labelId, callback) {
+        deleteIssueLabel: function(repoName, issueIndex, labelId, cb) {
             var opts = addToBody('/repos/'+gogs.user+'/'+repoName+
                 '/issues/'+issueIndex+'/labels/'+labelId, {});
             request.delete(opts, function(err, res, body) {
                 if (err != null) {
-                    callback(err, null);
+                    if (cb) cb(err, null);
                 } else {
-                    callback(null, body);
+                    if (cb) cb(null, body);
+                }
+            });
+        },
+        delete: function(username, repoName, labelId, cb) {
+            var opts = addToBody('/repos/'+gogs.user+'/'+repoName+
+                '/labels/'+labelId, {});
+            request.delete(opts, function(err, res, body) {
+                if (err != null) {
+                    if (cb) cb(err, null);
+                } else {
+                    if (cb) cb(null, body);
                 }
             });
         }

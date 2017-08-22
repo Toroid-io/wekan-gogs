@@ -42,10 +42,10 @@ vorpal
         w2g.getRepo('repoFullName', repoFullName, function(err, row) {
             exists = (!err && row);
             if (exists && row.active_prio && args.options.priority) {
+                if (!row.active) w2g.deleteLabels(args.username, args.repo);
                 w2g.gogsc.Webhooks.deleteWebhook(args.username, args.repo, row.hook_prioId,
                     function(err, none) {
                         if (err) {
-                            //TODO: Wat?
                             console.log('Error deleting webhook');
                             callback();
                         }
@@ -54,10 +54,10 @@ vorpal
                         callback();
                     });
             } else if (exists && row.active && !args.options.priority) {
+                if (!row.active_prio) w2g.deleteLabels(args.username, args.repo);
                 w2g.gogsc.Webhooks.deleteWebhook(args.username, args.repo, row.hookId,
                     function(err, none) {
                         if (err) {
-                            //TODO: Wat?
                             console.log('Error deleting webhook');
                             callback();
                         }
@@ -82,7 +82,6 @@ vorpal
 vorpal
     .command('activate <username> <repo>', 'Activate repository')
     .option('-p, --priority', 'Activate repo in priority board')
-    .option('-l, --labels', 'Create basic label set')
     .action(function(args, callback) {
         var console = this;
         var url = (args.options.priority)?w2g.url+'/gogs/priority':w2g.url+'/gogs';
@@ -138,7 +137,6 @@ vorpal
                                                 } else {
                                                     updateKey = 'backlogListId';
                                                     w2g.updateRepo('repoFullName', repoFullName, updateKey, listId);
-                                                    // TODO: CREATE LISTS
                                                     w2g.gogsc.Labels.createLabel(args.username,
                                                         args.repo, w2g.kanLabels.todo.name,
                                                         w2g.kanLabels.todo.color, function (err, label) {
@@ -146,27 +144,29 @@ vorpal
                                                             if (!err) {
                                                                 w2g.insertLabel(null, repo.id, label.name,
                                                                     listId);
-                                                                if (args.options.labels) {
-                                                                    w2g.kanLabels.others.forEach(function(label, idx_label, array_label) {
-                                                                        w2g.gogsc.Labels.createLabel(args.username,
-                                                                            args.repo, label.name, label.color, function (err, label) {
-                                                                                // Save in DB
-                                                                                if (!err) {
-                                                                                    w2g.insertLabel(null, repo.id, label.name,
-                                                                                        null /* TODO: New List ID */);
-                                                                                } else {
-                                                                                    console.log('Error creating label');
-                                                                                    callback();
-                                                                                }
-                                                                                if (idx_label === array_label.length - 1) {
-                                                                                    w2g.syncLabels(args.username, args.repo);
-                                                                                    callback();
-                                                                                }
-                                                                            });
-                                                                    });
-                                                                } else {
-                                                                    callback();
-                                                                }
+                                                                w2g.kanLabels.others.forEach(function(label, idx_label, array_label) {
+                                                                    w2g.gogsc.Labels.createLabel(args.username,
+                                                                        args.repo, label.name, label.color, function (err, label) {
+                                                                            if (!err) {
+                                                                                w2g.wekanc.Lists.create(label.name.split(':')[1],
+                                                                                    boardId, function(err, newListId) {
+                                                                                        if (!err) {
+                                                                                            w2g.insertLabel(null, repo.id, label.name, newListId);
+                                                                                        } else {
+                                                                                            console.log('Error creating list');
+                                                                                            callback();
+                                                                                        }
+                                                                                        if (idx_label === array_label.length - 1) {
+                                                                                            w2g.syncLabels(args.username, args.repo);
+                                                                                            callback();
+                                                                                        }
+                                                                                    });
+                                                                            } else {
+                                                                                console.log('Error creating label');
+                                                                                callback();
+                                                                            }
+                                                                        });
+                                                                });
                                                             } else {
                                                                 console.log('Error creating label');
                                                                 callback();
@@ -176,7 +176,18 @@ vorpal
                                             });
                                     });
                                 } else {
-                                    callback();
+                                    w2g.gogsc.Labels.createLabel(args.username,
+                                        args.repo, w2g.kanLabels.priority.name,
+                                        w2g.kanLabels.priority.color, function (err, label) {
+                                            // Save in DB
+                                            if (!err) {
+                                                w2g.insertLabel(null, repo.id, label.name,
+                                                    w2g.prioBacklogListId);
+                                                w2g.syncLabels(args.username, args.repo);
+                                                callback();
+                                            }
+                                            callback();
+                                        });
                                 }
                             });
                     }
