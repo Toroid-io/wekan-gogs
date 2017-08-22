@@ -159,8 +159,8 @@ var gogs = {
                 }
             });
         },
-        addIssueLabels: function(repoName, issueIndex, labels, cb) {
-            var opts = addToBody('/repos/'+gogs.user+'/'+repoName+
+        addIssueLabels: function(username, repoName, issueIndex, labels, cb) {
+            var opts = addToBody('/repos/'+username+'/'+repoName+
                 '/issues/'+issueIndex+'/labels', {
                     labels: labels
                 });
@@ -172,8 +172,8 @@ var gogs = {
                 }
             });
         },
-        deleteIssueLabel: function(repoName, issueIndex, labelId, cb) {
-            var opts = addToBody('/repos/'+gogs.user+'/'+repoName+
+        deleteIssueLabel: function(username, repoName, issueIndex, labelId, cb) {
+            var opts = addToBody('/repos/'+username+'/'+repoName+
                 '/issues/'+issueIndex+'/labels/'+labelId, {});
             request.delete(opts, function(err, res, body) {
                 if (err != null) {

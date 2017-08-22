@@ -8,6 +8,12 @@ var w2g = {
     gogsc: null,
     db: null,
     wekan: {
+        parseHook: function(hook) {
+            var act = w2g.wekan[hook.description.split('-')[1]];
+            if (hook && hook.description && act) {
+                act(hook);
+            }
+        },
         setupPrioBoard: function(cb) {
             w2g.prioBoardExists(w2g.wekanc.adminId, function(err, row) {
                 if (err) {
@@ -52,6 +58,45 @@ var w2g = {
                     // Just save the reference
                     w2g.prioBoardId = row.prioBoardId;
                     w2g.prioBacklogListId = row.prioBacklogListId;
+                }
+            });
+        },
+        moveCard: function(hook) {
+            const oldListId = hook.oldListId;
+            const listId = hook.listId;
+            const boardId = hook.boardId;
+            const cardId = hook.cardId;
+            w2g.getLabel('listId', oldListId, function(err, oldLabel) {
+                if (!err) {
+                    w2g.getRepo('boardId', boardId, function(err, repo) {
+                        if (!err) {
+                            w2g.getCard('cardId', cardId, function(err, card) {
+                                if (!err) {
+                                    w2g.gogsc.Labels.deleteIssueLabel(repo.username,
+                                        repo.repoName,
+                                        card.issueIndex,
+                                        oldLabel.id);
+                                    w2g.getLabel('listId', listId, function(err, label) {
+                                        if (!err) {
+                                            w2g.gogsc.Labels.addIssueLabels(repo.username,
+                                                repo.repoName, card.issueIndex, [label.id]);
+                                            w2g.updateCard('cardId', cardId, 'listId', listId);
+                                        } else {
+                                            console.log('Error getting new label');
+                                        }
+                                    });
+                                } else {
+                                    console.log('Error getting card');
+                                }
+                            })
+                        } else {
+                            console.log('Error getting repo');
+                            cb(err);
+                        }
+                    });
+                } else {
+                    console.log('Error getting old label');
+                    cb(err);
                 }
             });
         }
@@ -210,7 +255,7 @@ var w2g = {
                         w2g.getRepo('repoFullName', repoFullName, function(err, row) {
                             if (!err) {
                                 issues.forEach(function(issue) {
-                                    w2g.gogsc.Labels.addIssueLabels(repoName, issue.number, [label.id]);
+                                    w2g.gogsc.Labels.addIssueLabels(username, repoName, issue.number, [label.id]);
                                     w2g.wekanc.Cards.create(issue.title, issue.body, row.boardId, label.listId, function(err, cardId) {
                                         w2g.insertIssue(issue.id, repoFullName, issue.number, cardId, label.listId, row.boardId);
                                     });
@@ -263,13 +308,37 @@ var w2g = {
         w2g.db.run('DELETE FROM cards_prio WHERE issueId = ?',
             issueId);
     },
-    insertRepo: function(repoId, repoFullName, boardId, backlogListId, active, active_prio, hookId, hook_prioId) {
-        w2g.db.run('INSERT INTO repos VALUES (?,?,?,?,?,?,?,?)',
-            repoId, repoFullName, boardId, backlogListId, active, active_prio, hookId, hook_prioId);
+    insertRepo: function(repoId, username, repoName, boardId, backlogListId, active, active_prio, hookId, hook_prioId) {
+        w2g.db.run('INSERT INTO repos VALUES (?,?,?,?,?,?,?,?,?,?)',
+            repoId,
+            username,
+            repoName,
+            username+'/'+repoName,
+            boardId,
+            backlogListId,
+            active,
+            active_prio,
+            hookId,
+            hook_prioId);
     },
     updateRepo: function(searchkey, searchvalue, updatekey, updatevalue) {
         w2g.db.run('UPDATE repos SET '+updatekey+' = ? WHERE '+searchkey+' = ?',
             updatevalue, searchvalue);
+    },
+    getCard: function(searchKey, searchValue, cb) {
+        w2g.db.get('SELECT * FROM cards WHERE '+searchKey+' = ?',
+            searchValue,
+            function(err, row) {
+                if (err == null && row != undefined) {
+                    if (cb) cb(null, row);
+                } else {
+                    if (cb) cb(true);
+                }
+            });
+    },
+    updateCard: function(searchKey, searchValue, updateKey, updateValue) {
+        w2g.db.run('UPDATE cards SET '+updateKey+' = ? WHERE '+searchKey+' = ?',
+            updateValue, searchValue);
     },
     getPrioCard: function(issueId, cb) {
         w2g.db.get('SELECT * FROM cards_prio WHERE issueId = ?',

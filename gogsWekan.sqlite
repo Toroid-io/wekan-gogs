@@ -14,6 +14,8 @@ CREATE TABLE 'auth' (
 
 CREATE TABLE 'repos' (
 	'repoId'	integer,
+	'username'	varchar,
+	'repoName'	varchar,
 	'repoFullName'	varchar,
 	'boardId'	varchar,
 	'backlogListId'	varchar,

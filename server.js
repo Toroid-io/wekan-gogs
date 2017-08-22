@@ -1,7 +1,7 @@
 var express = require('express');
 var morgan = require('morgan');
 var bodyParser = require('body-parser');
-var wekan2gogs = require('./wekan2gogs.js')(function(err) {
+var w2g = require('./wekan2gogs.js')(function(err) {
     if (err) {
         console.log(err);
         process.exit(1);
@@ -16,17 +16,18 @@ app.use(bodyParser.json());
 
 app.post('/gogs/priority', function (req, res) {
     console.log(req.body);
-    wekan2gogs.gogs.parseHookPrio(req.body);
+    w2g.gogs.parseHookPrio(req.body);
     res.status(200).send('OK');
 });
 
 app.post('/gogs', function (req, res) {
-    //wekan2gogs.gogs.parseHook(req.body);
+    //console.log(req.body);
+    //w2g.gogs.parseHook(req.body);
     res.status(200).send('OK');
 });
 
 app.post('/wekan', function (req, res) {
-    console.log(req.body);
+    w2g.wekan.parseHook(req.body);
     res.status(200).send('OK');
 });
 

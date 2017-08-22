@@ -106,7 +106,8 @@ vorpal
                                 // Get repo ID from gogs
                                 if (!exists) {
                                     w2g.insertRepo(repo.id,
-                                        repoFullName,
+                                        args.username,
+                                        args.repo,
                                         w2g.prioBoardId, /* Just in case */
                                         w2g.prioBacklogListId, /* Just in case */
                                         0,
