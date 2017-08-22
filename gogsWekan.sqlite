@@ -26,7 +26,7 @@ CREATE TABLE 'repos' (
 
 CREATE TABLE 'cards' (
 	'issueId'	integer,
-	'repoName'	varchar,
+	'repoFullName'	varchar,
 	'issueIndex'	integer,
 	'cardId'	varchar,
 	'boardId'	varchar,
@@ -36,7 +36,7 @@ CREATE TABLE 'cards' (
 
 CREATE TABLE 'cards_prio' (
 	'issueId'	integer,
-	'repoName'	varchar,
+	'repoFullName'	varchar,
 	'issueIndex'	integer,
 	'cardId'	varchar,
 	'boardId'	varchar,

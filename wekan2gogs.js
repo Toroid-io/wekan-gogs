@@ -201,6 +201,33 @@ var w2g = {
                 prioBacklogListId = ? WHERE wekan_userid = ?',
             boardId, listId, userId);
     },
+    syncIssues: function(username, repoName) {
+        const repoFullName = username+'/'+repoName;
+        w2g.gogsc.Issues.getAll(username, repoName, function(err, issues) {
+            if (!err) {
+                w2g.getLabel('labelName', w2g.kanLabels.todo.name, function(err, label) {
+                    if (!err) {
+                        w2g.getRepo('repoFullName', repoFullName, function(err, row) {
+                            if (!err) {
+                                issues.forEach(function(issue) {
+                                    w2g.gogsc.Labels.addIssueLabels(repoName, issue.number, [label.id]);
+                                    w2g.wekanc.Cards.create(issue.title, issue.body, row.boardId, label.listId, function(err, cardId) {
+                                        w2g.insertIssue(issue.id, repoFullName, issue.number, cardId, label.listId, row.boardId);
+                                    });
+                                });
+                            } else {
+                                console.log('Error getting repoId');
+                            }
+                        });
+                    } else {
+                        console.log('Error getting labelId');
+                    }
+                });
+            } else {
+                console.log('Error getting issues');
+            }
+        });
+    },
     syncLabels: function(username, repoName) {
         w2g.gogsc.Labels.getAll(username, repoName, function(err, labels) {
             if (!err) {
@@ -214,16 +241,20 @@ var w2g = {
             }
         });
     },
-    insertIssue: function(issueId, cardId, boardId, listId) {
-        w2g.db.run('INSERT INTO cards (issueId, cardId, boardId, listId) VALUES (?,?,?,?)',
+    insertIssue: function(issueId, repoFullName, issueIndex, cardId, boardId, listId) {
+        w2g.db.run('INSERT INTO cards VALUES (?,?,?,?,?,?)',
             issueId,
+            repoFullName,
+            issueIndex,
             cardId,
             boardId,
             listId);
     },
-    insertPrioIssue: function(issueId, cardId, boardId, listId) {
-        w2g.db.run('INSERT INTO cards_prio (issueId, cardId, boardId, listId) VALUES (?,?,?,?)',
+    insertPrioIssue: function(issueId, repoFullName, issueIndex, cardId, boardId, listId) {
+        w2g.db.run('INSERT INTO cards_prio VALUES (?,?,?,?,?,?)',
             issueId,
+            repoFullName,
+            issueIndex,
             cardId,
             boardId,
             listId);

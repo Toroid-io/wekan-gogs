@@ -196,6 +196,13 @@ vorpal
     });
 
 vorpal
+    .command('sync <username> <repo>', 'Sync repository issues (only run this after activate)')
+    .action(function(args, callback) {
+        w2g.syncIssues(args.username, args.repo);
+        callback();
+    });
+
+vorpal
     .delimiter('wekan-gogs:')
 
 module.exports = function(_w2g) {

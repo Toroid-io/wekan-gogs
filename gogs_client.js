@@ -24,6 +24,18 @@ var gogs = {
     user: null,
     pass: null,
     token: null,
+    Issues: {
+        getAll: function(username, repoName, cb) {
+            var opts = addToBody('/repos/'+username+'/'+repoName+'/issues', {});
+            request.get(opts, function(err, res, body) {
+                if (err != null) {
+                    if (cb) cb(err, null);
+                } else {
+                    if (cb) cb(null, body);
+                }
+            });
+        }
+    },
     Repos: {
         listMyRepos: function(cb) {
             var opts = addToBody('/user/repos', {});
