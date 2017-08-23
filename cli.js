@@ -42,7 +42,7 @@ vorpal
         w2g.getRepo('repoFullName', repoFullName, function(err, row) {
             exists = (!err && row);
             if (exists && row.active_prio && args.options.priority) {
-                if (!row.active) w2g.deleteLabels(args.username, args.repo);
+                if (!row.active) w2g.deleteLabels(args.username, args.repo, false);
                 w2g.gogsc.Webhooks.deleteWebhook(args.username, args.repo, row.hook_prioId,
                     function(err, none) {
                         if (err) {
@@ -54,7 +54,7 @@ vorpal
                         callback();
                     });
             } else if (exists && row.active && !args.options.priority) {
-                if (!row.active_prio) w2g.deleteLabels(args.username, args.repo);
+                if (!row.active_prio) w2g.deleteLabels(args.username, args.repo, true);
                 w2g.gogsc.Webhooks.deleteWebhook(args.username, args.repo, row.hookId,
                     function(err, none) {
                         if (err) {

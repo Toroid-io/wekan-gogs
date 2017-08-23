@@ -109,19 +109,19 @@ var w2g = {
         },
         parseHook: function(body) {
             if (body.issue) {
-                w2g.gogs.issue(body);
+                //w2g.gogs.issue(body);
             }
         },
         label: function(body) {
             var issue = body.issue;
             var has_prio = false;
             issue.labels.forEach(function(el){
-                if (el.name === 'kan:priority') {
+                if (el.name === w2g.kanLabels.priority.name) {
                     has_prio = true;
                 }
             });
-            w2g.getPrioCard(issue.id, function(err, card){
-                if (err != null && has_prio) {
+            w2g.getPrioCard('issueId', issue.id, function(err, card){
+                if (err && has_prio) {
                     // Create card
                     var boardId = w2g.prioBoardId;
                     var listId = w2g.prioBacklogListId;
@@ -133,13 +133,14 @@ var w2g = {
                             } else {
                                 //Insert issue
                                 w2g.insertPrioIssue(issue.id,
+                                    body.repository.full_name,
+                                    issue.number,
                                     cardId,
                                     boardId,
                                     listId);
                             }
                         });
-                } else if (err == null && !has_prio) {
-                    console.log(card);
+                } else if (!err && !has_prio) {
                     // Delete card
                     w2g.wekanc.Cards.delete(card.boardId,
                         card.listId,
@@ -148,80 +149,36 @@ var w2g = {
                             if (err != null) {
                                 console.log('Error deleting card '+_id);
                             } else {
-                                w2g.removePrioCard(issue.id);
+                                w2g.removePrioIssue(issue.id);
                             }
                         });
                 }
             });
-        },
-        issue: function(issue) {
-            if (issue.action = 'opened') {
-                console.log(issue);
-                w2g.getRepo('repoId', issue.repository.id, function(err, repo){
-                    if (err != null) {
-                        // Create board
-                        w2g.wekanc.Boards.create(issue.repository.full_name, function (err, boardId) {
-                            if (err != null) {
-                            } else {
-                                // Insert repo
-                                w2g.insertRepo(issue.repository.id, boardId);
-                                // Create dummy list
-                                w2g.wekanc.Lists.create('Backlog', boardId, function (err, listId) {
-                                    if (err != null) {
-                                    } else {
-                                        // Create card
-                                        w2g.wekanc.Cards.create(issue.issue.title,
-                                            issue.issue.body,
-                                            boardId, listId, function(err, cardId) {
-                                                if (err != null) {
-                                                } else {
-                                                    //Insert issue
-                                                    w2g.insertIssue(issue.issue.id,
-                                                        cardId,
-                                                        boardId,
-                                                        listId);
-                                                }
-                                            });
-                                    }
+        }
+    },
+    deleteLabels: function(username, repoName, priority) {
+        w2g.getRepo('repoFullName', username+'/'+repoName, function(err, row) {
+            if (!err) {
+                if (priority) {
+                    w2g.db.get('SELECT * from labels WHERE repoId = ? AND \
+                    labelName = ?', row.repoId, w2g.kanLabels.priority.name,
+                        function(err, label) {
+                            if (!err) {
+                                w2g.gogsc.Labels.delete(username, repoName, label.id);
+                                w2g.db.run('DELETE FROM labels WHERE id = ?', label.id);
+                            }
+                        });
+                } else {
+                    w2g.db.all('SELECT * FROM labels WHERE repoId = ?',
+                        row.repoId, function(err, labels) {
+                            if (!err) {
+                                labels.forEach(function(label) {
+                                    w2g.gogsc.Labels.delete(username, repoName, label.id);
+                                    w2g.db.run('DELETE FROM labels WHERE id = ?', label.id);
                                 });
                             }
                         });
-                    } else {
-                        // Get lists
-                        w2g.wekanc.Lists.get(repo.boardId, function(err, lists) {
-                            if (err != null || lists.length === 0) {
-                            } else {
-                                var listId = lists[0]._id;
-                                // Create card
-                                w2g.wekanc.Cards.create(issue.issue.title,
-                                    issue.issue.body,
-                                    repo.boardId, listId, function(err, cardId) {
-                                        if (err != null) {
-                                        } else {
-                                            //Insert issue
-                                            w2g.insertIssue(issue.issue.id,
-                                                cardId,
-                                                repo.boardId,
-                                                listId);
-                                        }
-                                    });
-                            }
-                        });
-                    }
-                });
-            }
-        }
-    },
-    deleteLabels: function(username, repoName) {
-        w2g.getRepo('repoFullName', username+'/'+repoName, function(err, row) {
-            if (!err) {
-                w2g.db.all('SELECT * FROM labels WHERE repoId = ?',
-                    row.repoId, function(err, labels) {
-                        labels.forEach(function(label) {
-                            w2g.gogsc.Labels.delete(username, repoName, label.id);
-                            w2g.db.run('DELETE FROM labels WHERE id = ?', label.id);
-                        });
-                    });
+                }
             }
         });
     },
@@ -304,7 +261,7 @@ var w2g = {
             boardId,
             listId);
     },
-    removePrioCard: function(issueId) {
+    removePrioIssue: function(issueId) {
         w2g.db.run('DELETE FROM cards_prio WHERE issueId = ?',
             issueId);
     },
@@ -340,9 +297,9 @@ var w2g = {
         w2g.db.run('UPDATE cards SET '+updateKey+' = ? WHERE '+searchKey+' = ?',
             updateValue, searchValue);
     },
-    getPrioCard: function(issueId, cb) {
-        w2g.db.get('SELECT * FROM cards_prio WHERE issueId = ?',
-            issueId,
+    getPrioCard: function(searchKey, searchValue, cb) {
+        w2g.db.get('SELECT * FROM cards_prio WHERE '+searchKey+' = ?',
+            searchValue,
             function(err, row) {
                 if (err == null && row != undefined) {
                     if (cb) cb(null, row);
