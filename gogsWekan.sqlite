@@ -31,18 +31,10 @@ CREATE TABLE 'cards' (
 	'repoFullName'	varchar,
 	'issueIndex'	integer,
 	'cardId'	varchar,
+	'cardPrioId'	varchar,
 	'boardId'	varchar,
 	'listId'	varchar,
-	PRIMARY KEY(issueId)
-);
-
-CREATE TABLE 'cards_prio' (
-	'issueId'	integer,
-	'repoFullName'	varchar,
-	'issueIndex'	integer,
-	'cardId'	varchar,
-	'boardId'	varchar,
-	'listId'	varchar,
+	'listPrioId'	varchar,
 	PRIMARY KEY(issueId)
 );
 
