@@ -1,6 +1,6 @@
 /* This script creates an initial DB, with default configurations */
 
-CREATE TABLE 'auth' (
+CREATE TABLE IF NOT EXISTS 'auth' (
 	'gogs_url'		varchar,
 	'gogs_username'		varchar,
 	'gogs_password'		varchar,
@@ -12,7 +12,7 @@ CREATE TABLE 'auth' (
 	PRIMARY KEY(gogs_username)
 );
 
-CREATE TABLE 'repos' (
+CREATE TABLE IF NOT EXISTS 'repos' (
 	'repoId'	integer,
 	'username'	varchar,
 	'repoName'	varchar,
@@ -26,7 +26,7 @@ CREATE TABLE 'repos' (
 	PRIMARY KEY(repoId)
 );
 
-CREATE TABLE 'cards' (
+CREATE TABLE IF NOT EXISTS 'cards' (
 	'issueId'	integer,
 	'repoFullName'	varchar,
 	'issueIndex'	integer,
@@ -38,14 +38,14 @@ CREATE TABLE 'cards' (
 	PRIMARY KEY(issueId)
 );
 
-CREATE TABLE 'boards_prio' (
-	'wekan_userid'		varchar,
-	'prioBoardId'		varchar,
-	'prioBacklogListId'	varchar,
+CREATE TABLE IF NOT EXISTS 'boards_prio' (
+	'wekan_userid'	varchar,
+	'boardId'	varchar,
+	'backlogListId'	varchar,
 	PRIMARY KEY(wekan_userid)
 );
 
-CREATE TABLE 'labels' (
+CREATE TABLE IF NOT EXISTS 'labels' (
 	'id'		integer,
 	'repoId'	integer,
 	'labelName'	varchar,

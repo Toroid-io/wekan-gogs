@@ -51,6 +51,7 @@ vorpal
                         }
                         w2g.updateRepo('repoId', row.repoId, 'hook_prioId', null);
                         w2g.updateRepo('repoId', row.repoId, 'active_prio', 0);
+                        //TODO: DELETE ALL CARDS FROM DATABASE
                         callback();
                     });
             } else if (exists && row.active && !args.options.priority) {
@@ -69,6 +70,7 @@ vorpal
                                 callback();
                             }
                             w2g.updateRepo('repoId', row.repoId, 'boardId', null);
+                            //TODO: DELETE ALL CARDS FROM DATABASE
                             callback();
                         });
                     });

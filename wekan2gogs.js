@@ -18,7 +18,7 @@ var w2g = {
             w2g.prioBoardExists(w2g.wekanc.adminId, function(err, row) {
                 if (err) {
                     if (cb) cb(err);
-                } else if (!row || !row.prioBoardId) {
+                } else if (!row || !row.boardId) {
                     // Create board
                     w2g.wekanc.Boards.create('Priority', function(err, boardId) {
                         if (err != null) {
@@ -26,11 +26,11 @@ var w2g = {
                             return;
                         } else {
                             // Create list
-                            w2g.wekanc.Lists.create('To Do', boardId,
+                            w2g.wekanc.Lists.create(w2g.kanLabels.todo.name.split(':')[1],
+                                boardId,
                                 function(err, listId) {
                                     if (err != null) {
-                                        console.log('Error creating To Do list!');
-                                        // TODO: Delete board created?
+                                        console.log('Error creating list');
                                     } else {
                                         w2g.prioBoardId = boardId;
                                         w2g.prioBacklogListId = listId;
@@ -40,24 +40,10 @@ var w2g = {
                                 });
                         }
                     });
-                } else if (!row.prioBacklogListId) {
-                    // Create list
-                    w2g.wekanc.Lists.create('To Do', row.prioBoardId,
-                        function(err, listId) {
-                            if (err != null) {
-                                console.log('Error creating To Do list!');
-                                if (cb) cb('Error creating To Do list!');
-                            } else {
-                                w2g.prioBoardId = row.prioBoardId;
-                                w2g.prioBacklogListId = listId;
-                                w2g.updatePrioBoard(w2g.wekanc.adminId,
-                                    row.prioBoardId, listId);
-                            }
-                        });
                 } else {
                     // Just save the reference
-                    w2g.prioBoardId = row.prioBoardId;
-                    w2g.prioBacklogListId = row.prioBacklogListId;
+                    w2g.prioBoardId = row.boardId;
+                    w2g.prioBacklogListId = row.backlogListId;
                 }
             });
         },
@@ -217,8 +203,8 @@ var w2g = {
             listId);
     },
     updatePrioBoard: function(userId, boardId, listId) {
-        w2g.db.run('UPDATE boards_prio SET prioBoardId = ?, \
-                prioBacklogListId = ? WHERE wekan_userid = ?',
+        w2g.db.run('UPDATE boards_prio SET boardId = ?, \
+                backlogListId = ? WHERE wekan_userid = ?',
             boardId, listId, userId);
     },
     syncIssues: function(username, repoName) {
