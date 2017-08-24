@@ -52,39 +52,29 @@ var w2g = {
             const listId = hook.listId;
             const boardId = hook.boardId;
             const cardId = hook.cardId;
-            w2g.getLabel('listId', oldListId, function(err, oldLabel) {
-                if (!err) {
-                    w2g.getRepo('boardId', boardId, function(err, repo) {
-                        if (!err) {
-                            w2g.getCard('cardId', cardId, function(err, card) {
-                                if (!err) {
-                                    w2g.gogsc.Labels.deleteIssueLabel(repo.username,
-                                        repo.repoName,
-                                        card.issueIndex,
-                                        oldLabel.id);
-                                    w2g.getLabel('listId', listId, function(err, label) {
-                                        if (!err) {
-                                            w2g.gogsc.Labels.addIssueLabels(repo.username,
-                                                repo.repoName, card.issueIndex, [label.id]);
-                                            w2g.updateIssue('cardId', cardId, 'listId', listId);
-                                        } else {
-                                            console.log('Error getting new label');
-                                        }
-                                    });
-                                } else {
-                                    console.log('Error getting card');
-                                }
-                            })
-                        } else {
-                            console.log('Error getting repo');
-                            cb(err);
-                        }
-                    });
-                } else {
-                    console.log('Error getting old label');
-                    cb(err);
-                }
-            });
+            w2g.db.get('SELECT DISTINCT l1.id AS oldLabelId, \
+                l2.id AS newLabelId, \
+                r.username AS username, \
+                r.repoName AS repoName, \
+                c.issueIndex AS issueIndex \
+                FROM labels \
+                INNER JOIN labels AS l1 ON l1.listId = ? \
+                INNER JOIN labels AS l2 ON l2.listId = ? \
+                INNER JOIN repos AS r ON r.boardId = ? \
+                INNER JOIN cards AS c ON c.cardId = ?',
+                oldListId, listId, boardId, cardId, function(err, row) {
+                    if (!err) {
+                        w2g.gogsc.Labels.deleteIssueLabel(row.username,
+                            row.repoName,
+                            row.issueIndex,
+                            row.oldLabelId);
+                        w2g.gogsc.Labels.addIssueLabels(row.username,
+                            row.repoName, row.issueIndex, [row.newLabelId]);
+                        w2g.updateIssue('cardId', cardId, 'listId', listId);
+                    } else {
+                        console.log('Error getting data from database');
+                    }
+                });
         }
     },
     gogs: {
