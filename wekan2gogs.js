@@ -14,39 +14,6 @@ var w2g = {
                 act(hook);
             }
         },
-        setupPrioBoard: function(cb) {
-            w2g.prioBoardExists(w2g.wekanc.adminId, function(err, row) {
-                if (err) {
-                    if (cb) cb(err);
-                } else if (!row || !row.boardId) {
-                    // Create board
-                    w2g.wekanc.Boards.create('Priority', function(err, boardId) {
-                        if (err != null) {
-                            console.log('Error creating priority board!');
-                            return;
-                        } else {
-                            // Create list
-                            w2g.wekanc.Lists.create(w2g.kanLabels.todo.name.split(':')[1],
-                                boardId,
-                                function(err, listId) {
-                                    if (err != null) {
-                                        console.log('Error creating list');
-                                    } else {
-                                        w2g.prioBoardId = boardId;
-                                        w2g.prioBacklogListId = listId;
-                                        w2g.insertPrioBoard(w2g.wekanc.adminId,
-                                            boardId, listId);
-                                    }
-                                });
-                        }
-                    });
-                } else {
-                    // Just save the reference
-                    w2g.prioBoardId = row.boardId;
-                    w2g.prioBacklogListId = row.backlogListId;
-                }
-            });
-        },
         moveCard: function(hook) {
             const oldListId = hook.oldListId;
             const listId = hook.listId;
@@ -109,7 +76,7 @@ var w2g = {
                             } else {
                                 //Insert issue
                                 w2g.insertIssue(issue.id,
-                                    body.repository.full_name,
+                                    body.repository.id,
                                     issue.number,
                                     null,
                                     cardId,
@@ -150,31 +117,19 @@ var w2g = {
             });
         }
     },
-    deleteLabels: function(username, repoName, priority) {
-        w2g.getRepo('repoFullName', username+'/'+repoName, function(err, row) {
-            if (!err) {
-                if (priority) {
-                    w2g.db.get('SELECT * from labels WHERE repoId = ? AND \
-                    labelName = ?', row.repoId, w2g.kanLabels.priority.name,
-                        function(err, label) {
-                            if (!err && label) {
-                                w2g.gogsc.Labels.delete(username, repoName, label.id);
-                                w2g.db.run('DELETE FROM labels WHERE id = ?', label.id);
-                            }
-                        });
-                } else {
-                    w2g.db.all('SELECT * FROM labels WHERE repoId = ?',
-                        row.repoId, function(err, labels) {
-                            if (!err) {
-                                labels.forEach(function(label) {
-                                    w2g.gogsc.Labels.delete(username, repoName, label.id);
-                                    w2g.db.run('DELETE FROM labels WHERE id = ?', label.id);
-                                });
-                            }
-                        });
+    deleteLabels: function(repoId, priority) {
+        w2g.db.all('SELECT l.*, r.username, r.repoName \
+            FROM labels AS l \
+            INNER JOIN repos AS r \
+            WHERE l.repoId = ? AND l.labelName LIKE ?',
+            repoId, (priority?'%priority':'%'), function(err, row) {
+                if (!err) {
+                    row.forEach(function(label) {
+                        w2g.gogsc.Labels.delete(label.username, label.repoName, label.id);
+                        w2g.db.run('DELETE FROM labels WHERE id = ?', label.id);
+                    });
                 }
-            }
-        });
+            });
     },
     prioBoardExists: function(user, cb) {
         w2g.db.get('SELECT * FROM boards_prio WHERE wekan_userid = ?',
@@ -185,6 +140,10 @@ var w2g = {
                     if (cb) cb(null, row);
                 }
             });
+    },
+    insertPrioList: function(listId, boardId, labelName) {
+        w2g.db.run('INSERT INTO lists_prio VALUES (?,?,?)',
+            listId, boardId, labelName);
     },
     insertPrioBoard: function(userId, boardId, listId) {
         w2g.db.run('INSERT INTO boards_prio VALUES (?,?,?)',
@@ -197,27 +156,41 @@ var w2g = {
                 backlogListId = ? WHERE wekan_userid = ?',
             boardId, listId, userId);
     },
+    syncRepos: function() {
+        w2g.gogsc.Repos.listMyRepos(function(err, repos) {
+            if (!err) {
+                repos.forEach(function(repo) {
+                    w2g.db.run('INSERT INTO repos \
+                    SELECT ?, ?, ?, null, null, 0, 0, null, null \
+                    WHERE NOT EXISTS(SELECT 1 FROM repos WHERE repoId = ?)',
+                        repo.id, repo.owner.username, repo.full_name.split('/').pop(),
+                        repo.id);
+                });
+            } else {
+                console.log('Error syncing repos');
+            }
+        });
+    },
     syncIssues: function(username, repoName) {
-        const repoFullName = username+'/'+repoName;
         w2g.gogsc.Issues.getAll(username, repoName, function(err, issues) {
             if (!err) {
-                w2g.getLabel('labelName', w2g.kanLabels.todo.name, function(err, label) {
-                    if (!err) {
-                        w2g.getRepo('repoFullName', repoFullName, function(err, row) {
-                            if (!err) {
-                                issues.forEach(function(issue) {
-                                    w2g.gogsc.Labels.addIssueLabels(username, repoName, issue.number, [label.id]);
-                                    w2g.wekanc.Cards.create(issue.title, issue.body, row.boardId, label.listId, function(err, cardId) {
-                                        w2g.insertIssue(issue.id, repoFullName, issue.number, cardId, null, row.boardId, label.listId, null);
-                                    });
+                w2g.db.get('SELECT l.id AS labelId, \
+                l.listId, r.boardId, r.repoId \
+                FROM labels AS l \
+                INNER JOIN repos AS r \
+                ON r.username = ? AND r.repoName = ? \
+                WHERE l.labelName = ?',
+                    username, repoName, w2g.kanLabels.other[0].name, function(err, row) { /* [0] is to-do */
+                        if (!err) {
+                            issues.forEach(function(issue) {
+                                w2g.gogsc.Labels.addIssueLabels(username, repoName, issue.number, [row.labelId]);
+                                w2g.wekanc.Cards.create(issue.title, issue.body, row.boardId, row.listId, function(err, cardId) {
+                                    w2g.insertIssue(issue.id, row.repoId, issue.number, cardId, null, row.boardId, row.listId, null);
                                 });
-                            } else {
-                                console.log('Error getting repoId');
-                            }
-                        });
-                    } else {
-                        console.log('Error getting labelId');
-                    }
+                            });
+                        } else {
+                            console.log('Error getting data from database');
+                        }
                 });
             } else {
                 console.log('Error getting issues');
@@ -229,6 +202,7 @@ var w2g = {
             if (!err) {
                 labels.forEach(function(el) {
                     w2g.getLabel('labelName', el.name, function(err, row) {
+                        console.log(row);
                         if (!err && row) {
                             w2g.updateLabel('labelName', el.name, 'id', el.id);
                         }
@@ -237,10 +211,15 @@ var w2g = {
             }
         });
     },
-    insertIssue: function(issueId, repoFullName, issueIndex, cardId, cardPrioId, boardId, listId, listPrioId) {
-        w2g.db.run('INSERT INTO cards VALUES (?,?,?,?,?,?,?,?)',
+    insertIssue: function(issueId, repoId, issueIndex, cardId, cardPrioId, boardId, listId, listPrioId) {
+        w2g.db.run('INSERT OR REPLACE INTO cards VALUES (?,?,?, \
+            COALESCE((SELECT cardId FROM cards WHERE issueId = \''+issueId+'\'), ?), \
+            COALESCE((SELECT cardPrioId FROM cards WHERE issueId = \''+issueId+'\'), ?), \
+            COALESCE((SELECT boardId FROM cards WHERE issueId = \''+issueId+'\'), ?), \
+            COALESCE((SELECT listId FROM cards WHERE issueId = \''+issueId+'\'), ?), \
+            COALESCE((SELECT listPrioId FROM cards WHERE issueId = \''+issueId+'\'), ?))',
             issueId,
-            repoFullName,
+            repoId,
             issueIndex,
             cardId,
             cardPrioId,
@@ -253,11 +232,10 @@ var w2g = {
             issueId);
     },
     insertRepo: function(repoId, username, repoName, boardId, backlogListId, active, active_prio, hookId, hook_prioId) {
-        w2g.db.run('INSERT INTO repos VALUES (?,?,?,?,?,?,?,?,?,?)',
+        w2g.db.run('INSERT INTO repos VALUES (?,?,?,?,?,?,?,?,?)',
             repoId,
             username,
             repoName,
-            username+'/'+repoName,
             boardId,
             backlogListId,
             active,
@@ -309,35 +287,92 @@ var w2g = {
                 }
             });
     },
-    insertLabel: function(id, repoId, labelName, listId) {
-        w2g.db.run('INSERT INTO labels VALUES (?,?,?,?)',
-            id, repoId, labelName, listId);
+    insertLabel: function(id, repoId, labelName, listId, prioListId) {
+        w2g.db.run('INSERT INTO labels VALUES (?,?,?,?,?)',
+            id, repoId, labelName, listId, prioListId);
     },
     updateLabel: function(searchKey, searchValue, updateKey, updateValue) {
         w2g.db.run('UPDATE labels SET '+updateKey+' = ? WHERE '+searchKey+' = ?',
             updateValue, searchValue);
     },
+    setupPrioBoard: function(cb) {
+        w2g.prioBoardExists(w2g.wekanc.adminId, function(err, row) {
+            if (err) {
+                if (cb) cb(err);
+            } else if (!row || !row.boardId) {
+                // Create board
+                w2g.wekanc.Boards.create('Priority', function(err, boardId) {
+                    if (err != null) {
+                        console.log('Error creating priority board!');
+                        return;
+                    } else {
+                        w2g.prioBoardId = boardId;
+                        w2g.kanLabels.other.forEach(function(label, label_idx, label_array) {
+                            // Create list
+                            w2g.wekanc.Lists.create(label.name.split(':').pop(),
+                                boardId,
+                                function(err, listId) {
+                                    if (err != null) {
+                                        console.log('Error creating list');
+                                    } else {
+                                        if (label_idx === 0) {
+                                            w2g.prioBacklogListId = listId;
+                                            w2g.insertPrioBoard(w2g.wekanc.adminId,
+                                                boardId, listId);
+                                        }
+                                        w2g.insertPrioList(listId, boardId, label.name);
+                                        label_array[label_idx].prioListId = listId;
+                                    }
+                                });
+                        });
+                    }
+                });
+            } else {
+                // Just save the reference
+                w2g.prioBoardId = row.boardId;
+                w2g.prioBacklogListId = row.backlogListId;
+                w2g.setupPrioLabels(row.boardId);
+            }
+        });
+    },
+    setupPrioLabels: function(prioBoardId, cb) {
+        w2g.kanLabels.other.forEach(function(label, label_index, label_array) {
+            w2g.db.get('SELECT * FROM lists_prio \
+                    WHERE boardId = ? AND labelName = ?',
+                prioBoardId, label.name, function(err, list) {
+                    if (!err) {
+                        label_array[label_index].prioListId = list.listId;
+                    } else {
+                        console.log('Error getting prio lists');
+                    }
+                });
+        });
+    },
     kanLabels: {
-        todo: {
-            name: 'kan:To Do',
-            color: '#c7def8'
-        },
         priority: {
             name: 'kan:Priority',
             color: '#FE2E2E'
         },
-        others: [
+        other: [
+            {
+                name: 'kan:To Do',
+                color: '#c7def8',
+                prioListId: null
+            },
             {
                 name: 'kan:In Progress',
-                color: '#fca43f'
+                color: '#fca43f',
+                prioListId: null
             },
             {
                 name: 'kan:Review',
-                color: '#bf3cfc'
+                color: '#bf3cfc',
+                prioListId: null
             },
             {
                 name: 'kan:Done',
-                color: '#71d658'
+                color: '#71d658',
+                prioListId: null
             }
         ]
     }
@@ -358,7 +393,7 @@ module.exports = function(cb) {
         w2g.wekanc = require('./wekan_client.js')(wurl, wusr, wpass,
             function(err) {
                 if (!err) {
-                    w2g.wekan.setupPrioBoard(function(err) {/* TODO */});
+                    w2g.setupPrioBoard(function(err) {/* TODO */});
                 }
             });
         w2g.gogsc = require('./gogs_client.js')(gurl, gusr, gpass, gtoken);

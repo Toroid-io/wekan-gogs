@@ -184,7 +184,7 @@ var gogs = {
             });
         },
         delete: function(username, repoName, labelId, cb) {
-            var opts = addToBody('/repos/'+gogs.user+'/'+repoName+
+            var opts = addToBody('/repos/'+username+'/'+repoName+
                 '/labels/'+labelId, {});
             request.delete(opts, function(err, res, body) {
                 if (err != null) {

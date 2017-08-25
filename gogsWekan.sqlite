@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS 'repos' (
 	'repoId'	integer,
 	'username'	varchar,
 	'repoName'	varchar,
-	'repoFullName'	varchar,
 	'boardId'	varchar,
 	'backlogListId'	varchar,
 	'active'	integer,
@@ -28,7 +27,7 @@ CREATE TABLE IF NOT EXISTS 'repos' (
 
 CREATE TABLE IF NOT EXISTS 'cards' (
 	'issueId'	integer,
-	'repoFullName'	varchar,
+	'repoId'	integer,
 	'issueIndex'	integer,
 	'cardId'	varchar,
 	'cardPrioId'	varchar,
@@ -45,11 +44,19 @@ CREATE TABLE IF NOT EXISTS 'boards_prio' (
 	PRIMARY KEY(wekan_userid)
 );
 
+CREATE TABLE IF NOT EXISTS 'lists_prio' (
+	'listId'	varchar,
+	'boardId'	varchar,
+	'labelName'	varchar,
+	PRIMARY KEY(listId)
+);
+
 CREATE TABLE IF NOT EXISTS 'labels' (
 	'id'		integer,
 	'repoId'	integer,
 	'labelName'	varchar,
 	'listId'	varchar,
+	'prioListId'	varchar,
 	PRIMARY KEY(id)
 );
 
