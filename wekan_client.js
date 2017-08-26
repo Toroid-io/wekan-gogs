@@ -108,6 +108,17 @@ var wekan = {
                     if (cb) cb(null, body._id);
                 }
             });
+        },
+        update: function(boardId, listId, cardId, params, cb) {
+            var opts = addToBody('/api/boards/'+boardId+'/lists/'+listId+'/cards/'+cardId, params);
+            request.put(opts, function(err, res, body) {
+                if (err != null) {
+                    if (cb) cb(err, null);
+                } else {
+                    if (cb) cb(null, body._id);
+                }
+            });
+
         }
     }
 }
