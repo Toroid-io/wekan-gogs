@@ -15,7 +15,6 @@ app.use(morgan('dev')); //Logging
 app.use(bodyParser.json());
 
 app.post('/gogs/priority', function (req, res) {
-    console.log(req.body);
     w2g.gogs.parseHookPrio(req.body);
     res.status(200).send('OK');
 });
@@ -26,8 +25,13 @@ app.post('/gogs', function (req, res) {
     res.status(200).send('OK');
 });
 
+app.post('/wekan/priority', function (req, res) {
+    w2g.wekan.parseHook(req.body, true);
+    res.status(200).send('OK');
+});
+
 app.post('/wekan', function (req, res) {
-    w2g.wekan.parseHook(req.body);
+    w2g.wekan.parseHook(req.body, false);
     res.status(200).send('OK');
 });
 
