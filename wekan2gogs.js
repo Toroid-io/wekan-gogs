@@ -8,36 +8,56 @@ var w2g = {
     gogsc: null,
     db: null,
     wekan: {
-        parseHook: function(hook) {
+        parseHook: function(hook, prio) {
             var act = w2g.wekan[hook.description.split('-')[1]];
             if (hook && hook.description && act) {
-                act(hook);
+                act(hook, prio);
             }
         },
-        moveCard: function(hook) {
+        moveCard: function(hook, prio) {
             const oldListId = hook.oldListId;
             const listId = hook.listId;
             const boardId = hook.boardId;
             const cardId = hook.cardId;
-            w2g.db.get('SELECT DISTINCT l1.id AS oldLabelId, \
+            w2g.db.get('SELECT DISTINCT \
+                l1.id AS oldLabelId, \
+                l1.listId AS oldListId, \
+                l1.prioListId AS oldPrioListId, \
                 l2.id AS newLabelId, \
+                l2.listId AS newListId, \
+                l2.prioListId AS newPrioListId, \
                 r.username AS username, \
                 r.repoName AS repoName, \
+                r.boardId, c.listId AS currentListId, \
+                c.listPrioId AS currentPrioListId, \
+                c.cardId, c.cardPrioId, \
                 c.issueIndex AS issueIndex \
                 FROM labels \
-                INNER JOIN labels AS l1 ON l1.listId = ? \
-                INNER JOIN labels AS l2 ON l2.listId = ? \
-                INNER JOIN repos AS r ON r.boardId = ? \
-                INNER JOIN cards AS c ON c.cardId = ?',
-                oldListId, listId, boardId, cardId, function(err, row) {
-                    if (!err) {
+                INNER JOIN labels AS l1 ON l1.listId = ? OR l1.prioListId = ? \
+                INNER JOIN labels AS l2 ON l2.listId = ? OR l2.prioListId = ? \
+                INNER JOIN repos AS r \
+                INNER JOIN cards AS c ON c.cardId = ? OR c.cardPrioId = ?',
+                oldListId, oldListId, listId, listId, cardId, cardId, function(err, row) {
+                    console.log(err, row);
+                    if (!err && row) {
                         w2g.gogsc.Labels.deleteIssueLabel(row.username,
                             row.repoName,
                             row.issueIndex,
                             row.oldLabelId);
                         w2g.gogsc.Labels.addIssueLabels(row.username,
                             row.repoName, row.issueIndex, [row.newLabelId]);
-                        w2g.updateIssue('cardId', cardId, 'listId', listId);
+                        console.log(row);
+                        if (prio && row.newListId != row.currentListId) {
+                            console.log('Moving repo board');
+                            w2g.wekanc.Cards.update(row.boardId, row.oldListId, row.cardId, {
+                                listId: row.newListId });
+                        } else if (row.newPrioListId != row.currentPrioListId) {
+                            console.log('Moving prio board');
+                            w2g.wekanc.Cards.update(w2g.prioBoardId, row.oldPrioListId, row.cardPrioId, {
+                                listId: row.newPrioListId });
+                        }
+                        w2g.updateIssue('cardId', row.cardId, 'listId', row.newListId);
+                        w2g.updateIssue('cardId', row.cardId, 'listPrioId', row.newPrioListId);
                     } else {
                         console.log('Error getting data from database');
                     }
@@ -64,7 +84,7 @@ var w2g = {
                 }
             });
             w2g.getCard('issueId', issue.id, function(err, card){
-                if (err && has_prio) {
+                if ((err && has_prio) || (!err && has_prio && !card.cardPrioId)) {
                     // Create card
                     var boardId = w2g.prioBoardId;
                     var listId = w2g.prioBacklogListId;
@@ -83,21 +103,6 @@ var w2g = {
                                     null,
                                     null,
                                     listId);
-                            }
-                        });
-                } else if (!err && has_prio && !card.cardPrioId) {
-                    // Update
-                    var boardId = w2g.prioBoardId;
-                    var listId = w2g.prioBacklogListId;
-                    w2g.wekanc.Cards.create(issue.title,
-                        issue.body,
-                        boardId,
-                        listId, function(err, cardId) {
-                            if (err != null) {
-                            } else {
-                                // Update issue
-                                w2g.updateIssue('issueId', issue.id, 'cardPrioId', cardId);
-                                w2g.updateIssue('issueId', issue.id, 'listPrioId', listId);
                             }
                         });
                 } else if (!err && !has_prio && card.cardPrioId) {
@@ -202,7 +207,6 @@ var w2g = {
             if (!err) {
                 labels.forEach(function(el) {
                     w2g.getLabel('labelName', el.name, function(err, row) {
-                        console.log(row);
                         if (!err && row) {
                             w2g.updateLabel('labelName', el.name, 'id', el.id);
                         }

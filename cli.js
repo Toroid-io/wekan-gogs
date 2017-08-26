@@ -37,12 +37,6 @@ vorpal
             args.username, args.repo, function(err, repo) {
                 exists = (!err && repo);
                 if (exists && repo.active_prio && args.options.priority) {
-                    if (!repo.active) {
-                        w2g.deleteLabels(repo.repoId, false);
-                        w2g.db.run('UPDATE cards \
-                    SET cardPrioId = null, listPrioId = null \
-                    WHERE repoId = ?', repo.repoId);
-                    }
                     w2g.deleteLabels(repo.repoId, true);
                     w2g.gogsc.Webhooks.deleteWebhook(args.username, args.repo, repo.hook_prioId,
                         function(err, none) {
@@ -52,12 +46,19 @@ vorpal
                             }
                             w2g.updateRepo('repoId', repo.repoId, 'hook_prioId', null);
                             w2g.updateRepo('repoId', repo.repoId, 'active_prio', 0);
-                            w2g.db.all('SELECT cardPrioId FROM cards WHERE repoId = ?', repo.repoId,
+                            w2g.db.all('SELECT * FROM cards \
+                                WHERE repoId = ? AND cardPrioId NOT NULL', repo.repoId,
                                 function(err, cards) {
                                     if (!err) {
                                         cards.forEach(function(card) {
-                                            w2g.wekanc.Cards.delete(w2g.prioBoardId, card.listPrioId, card.cardId, null);
+                                            w2g.wekanc.Cards.delete(w2g.prioBoardId, card.listPrioId, card.cardPrioId);
                                         });
+                                        if (!repo.active) {
+                                            w2g.deleteLabels(repo.repoId, false);
+                                            w2g.db.run('UPDATE cards \
+                                                SET cardPrioId = null, listPrioId = null \
+                                                WHERE repoId = ?', repo.repoId);
+                                        }
                                         callback();
                                     } else {
                                         console.log('Error deleting cards');
@@ -162,12 +163,11 @@ vorpal
                                                                     // null because of gogs API problem
                                                                     w2g.insertLabel(null, repo.repoId, label.name,
                                                                         listId, label.prioListId);
-                                                                    if (label_idx === label_array.length - 1) {
-                                                                        w2g.syncLabels(args.username, args.repo);
-                                                                        callback();
-                                                                    }
                                                                 } else {
                                                                     console.log('Error creating label');
+                                                                }
+                                                                if (label_idx === label_array.length - 1) {
+                                                                    w2g.syncLabels(args.username, args.repo);
                                                                     callback();
                                                                 }
                                                             });
@@ -186,8 +186,30 @@ vorpal
                                         if (!err) {
                                             w2g.insertLabel(null, repo.repoId, label.name,
                                                 w2g.prioBacklogListId, null);
-                                            w2g.syncLabels(args.username, args.repo);
-                                            callback();
+                                            // If not active (all labels where deleted, create them)
+                                            if (!repo.active) {
+                                                w2g.kanLabels.other.forEach(function(label, label_idx, label_array) {
+                                                    w2g.gogsc.Labels.createLabel(args.username,
+                                                        args.repo, label.name,
+                                                        label.color, function (err, glabel) {
+                                                            // Save in DB
+                                                            if (!err) {
+                                                                // null because of gogs API problem
+                                                                w2g.insertLabel(null, repo.repoId, label.name,
+                                                                    null, label.prioListId);
+                                                            } else {
+                                                                console.log('Error creating label');
+                                                            }
+                                                            if (label_idx === label_array.length - 1) {
+                                                                w2g.syncLabels(args.username, args.repo);
+                                                                callback();
+                                                            }
+                                                        });
+                                                });
+                                            } else {
+                                                w2g.syncLabels(args.username, args.repo);
+                                                callback();
+                                            }
                                         } else {
                                             console.log('Error creating priority label');
                                             callback();
