@@ -120,6 +120,84 @@ var wekan = {
             });
 
         }
+    },
+    Integrations: {
+        create: function(boardId, url, cb) {
+            var opts = addToBody('/api/boards/'+boardId+'/integrations', {
+                url: url
+            });
+            request.post(opts, function(err, res, body) {
+                if (err != null) {
+                    if (cb) cb(err, null);
+                } else {
+                    if (cb) cb(null, body);
+                }
+            });
+        },
+        getAll: function(boardId, cb) {
+            var opts = addToBody('/api/boards/'+boardId+'/integrations', {});
+            request.get(opts, function(err, res, body) {
+                if (err != null) {
+                    if (cb) cb(err, null);
+                } else {
+                    if (cb) cb(null, body);
+                }
+            });
+        },
+        get: function(boardId, intId, cb) {
+            var opts = addToBody('/api/boards/'+boardId+'/integrations/'+intId, {});
+            request.get(opts, function(err, res, body) {
+                if (err != null) {
+                    if (cb) cb(err, null);
+                } else {
+                    if (cb) cb(null, body);
+                }
+            });
+        },
+        update: function(boardId, intId, updateData, cb) {
+            var opts = addToBody('/api/boards/'+boardId+'/integrations/'+intId, updateData);
+            request.put(opts, function(err, res, body) {
+                if (err != null) {
+                    if (cb) cb(err, null);
+                } else {
+                    if (cb) cb(null, body);
+                }
+            });
+        },
+        addActivities: function(boardId, intId, activities, cb) {
+            var opts = addToBody('/api/boards/'+boardId+'/integrations/'+intId+'/activities', {
+                activities: activities
+            });
+            request.post(opts, function(err, res, body) {
+                if (err != null) {
+                    if (cb) cb(err, null);
+                } else {
+                    if (cb) cb(null, body);
+                }
+            });
+        },
+        removeActivities: function(boardId, intId, activities, cb) {
+            var opts = addToBody('/api/boards/'+boardId+'/integrations/'+intId+'/activities', {
+                activities: activities
+            });
+            request.delete(opts, function(err, res, body) {
+                if (err != null) {
+                    if (cb) cb(err, null);
+                } else {
+                    if (cb) cb(null, body);
+                }
+            });
+        },
+        delete: function(boardId, intId, cb) {
+            var opts = addToBody('/api/boards/'+boardId+'/integrations/'+intId, {});
+            request.delete(opts, function(err, res, body) {
+                if (err != null) {
+                    if (cb) cb(err, null);
+                } else {
+                    if (cb) cb(null, body);
+                }
+            });
+        }
     }
 }
 

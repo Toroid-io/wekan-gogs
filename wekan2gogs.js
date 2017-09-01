@@ -319,10 +319,16 @@ var w2g = {
                                     if (err != null) {
                                         console.log('Error creating list');
                                     } else {
-                                        if (label_idx === 0) {
+                                        if (label_idx === 0) { // if To Do
                                             w2g.prioBacklogListId = listId;
                                             w2g.insertPrioBoard(w2g.wekanc.adminId,
                                                 boardId, listId);
+                                        } else if (label_idx === label_array.length - 1) {
+                                            w2g.wekanc.Integrations.create(boardId, w2g.url+'/wekan/priority', function(err, int) {
+                                                if (err) {
+                                                    console.log('Error creaating wekan webook');
+                                                }
+                                            });
                                         }
                                         w2g.insertPrioList(listId, boardId, label.name);
                                         label_array[label_idx].prioListId = listId;

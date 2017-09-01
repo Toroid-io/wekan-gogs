@@ -141,6 +141,7 @@ vorpal
                                     }
                                     updateKey = 'boardId';
                                     w2g.updateRepo('repoId', repo.repoId, updateKey, boardId);
+                                    w2g.wekanc.Integrations.create(boardId, w2g.url+'/wekan');
                                     // Create All lists
                                     // if index == 0, then save to-do reference
                                     w2g.kanLabels.other.forEach(function(label, label_idx, label_array) {
