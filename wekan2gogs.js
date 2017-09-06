@@ -30,12 +30,12 @@ var w2g = {
                 r.repoName AS repoName, \
                 r.boardId, c.listId AS currentListId, \
                 c.listPrioId AS currentPrioListId, \
-                c.cardId, c.cardPrioId, \
+                c.cardId, c.cardPrioId, c.repoId, \
                 c.issueIndex AS issueIndex \
                 FROM labels \
                 INNER JOIN labels AS l1 ON l1.listId = ? OR l1.prioListId = ? \
                 INNER JOIN labels AS l2 ON l2.listId = ? OR l2.prioListId = ? \
-                INNER JOIN repos AS r \
+                INNER JOIN repos AS r ON r.repoId = c.repoId \
                 INNER JOIN cards AS c ON c.cardId = ? OR c.cardPrioId = ?',
                 oldListId, oldListId, listId, listId, cardId, cardId, function(err, row) {
                     console.log(err, row);
@@ -176,8 +176,8 @@ var w2g = {
             }
         });
     },
-    syncIssues: function(username, repoName) {
-        w2g.gogsc.Issues.getAll(username, repoName, function(err, issues) {
+    syncIssues: function(username, repoName, page) {
+        w2g.gogsc.Issues.getAll(username, repoName, page, function(err, issues) {
             if (!err) {
                 w2g.db.get('SELECT l.id AS labelId, \
                 l.listId, r.boardId, r.repoId \
@@ -188,10 +188,15 @@ var w2g = {
                     username, repoName, w2g.kanLabels.other[0].name, function(err, row) { /* [0] is to-do */
                         if (!err) {
                             issues.forEach(function(issue) {
-                                w2g.gogsc.Labels.addIssueLabels(username, repoName, issue.number, [row.labelId]);
-                                w2g.wekanc.Cards.create(issue.title, issue.body, row.boardId, row.listId, function(err, cardId) {
-                                    w2g.insertIssue(issue.id, row.repoId, issue.number, cardId, null, row.boardId, row.listId, null);
-                                });
+                                w2g.db.get('SELECT cardId FROM cards WHERE cards.issueId = ?',
+                                    issue.id, function(err, card) {
+                                        if (!err && (!card || card.cardId == null)) {
+                                            w2g.gogsc.Labels.addIssueLabels(username, repoName, issue.number, [row.labelId]);
+                                            w2g.wekanc.Cards.create(issue.title, issue.body, row.boardId, row.listId, function(err, cardId) {
+                                                w2g.insertIssue(issue.id, row.repoId, issue.number, cardId, null, row.boardId, row.listId, null);
+                                            });
+                                        }
+                                    });
                             });
                         } else {
                             console.log('Error getting data from database');

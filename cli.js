@@ -104,7 +104,6 @@ vorpal
     .action(function(args, callback) {
         var console = this;
         var url = (args.options.priority)?w2g.url+'/gogs/priority':w2g.url+'/gogs';
-        callback();
         w2g.db.get('SELECT * FROM repos WHERE username = ? AND repoName = ?',
             args.username, args.repo, function(err, repo) {
                 exists = (!err && repo);
@@ -223,10 +222,22 @@ vorpal
     });
 
 vorpal
-    .command('sync issues <username> <repo>', 'Sync repository issues (only run this after activate)')
+    .command('sync issues <username> <repo> <page>', 'Sync repository issues (only run this after activate)')
     .action(function(args, callback) {
-        w2g.syncIssues(args.username, args.repo);
-        callback();
+        w2g.db.get('SELECT * FROM repos WHERE username = ? AND repoName = ?',
+            args.username, args.repo, function(err, repo) {
+                exists = (!err && repo);
+                if (exists && repo.active) {
+                    w2g.syncIssues(args.username, args.repo, args.page);
+                    callback();
+                } else if (exists && !repo.active) {
+                    console.log('Repo is not active, please activate repo first');
+                    callback();
+                } else if (!exists) {
+                    console.log('Repo does not exists in database, please consider syncing repos first');
+                    callback();
+                }
+            });
     });
 
 vorpal
