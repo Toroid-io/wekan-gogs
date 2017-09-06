@@ -25,8 +25,8 @@ var gogs = {
     pass: null,
     token: null,
     Issues: {
-        getAll: function(username, repoName, cb) {
-            var opts = addToBody('/repos/'+username+'/'+repoName+'/issues', {});
+        getAll: function(username, repoName, page, cb) {
+            var opts = addToBody('/repos/'+username+'/'+repoName+'/issues?page='+page, {});
             request.get(opts, function(err, res, body) {
                 if (err != null) {
                     if (cb) cb(err, null);
