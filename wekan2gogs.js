@@ -38,7 +38,6 @@ var w2g = {
                 INNER JOIN repos AS r ON r.repoId = c.repoId \
                 INNER JOIN cards AS c ON c.cardId = ? OR c.cardPrioId = ?',
                 oldListId, oldListId, listId, listId, cardId, cardId, function(err, row) {
-                    console.log(err, row);
                     if (!err && row) {
                         w2g.gogsc.Labels.deleteIssueLabel(row.username,
                             row.repoName,
@@ -85,43 +84,46 @@ var w2g = {
                     has_prio = true;
                 }
             });
-            w2g.getCard('issueId', issue.id, function(err, card){
-                if ((err && has_prio) || (!err && has_prio && !card.cardPrioId)) {
-                    // Create card
-                    var boardId = w2g.prioBoardId;
-                    var listId = w2g.prioBacklogListId;
-                    w2g.wekanc.Cards.create(issue.title,
-                        issue.body,
-                        boardId,
-                        listId, function(err, cardId) {
-                            if (err != null) {
-                            } else {
-                                //Insert issue
-                                w2g.insertIssue(issue.id,
-                                    body.repository.id,
-                                    issue.number,
-                                    null,
-                                    cardId,
-                                    null,
-                                    null,
-                                    listId);
-                            }
-                        });
-                } else if (!err && !has_prio && card.cardPrioId) {
-                    // Delete card
-                    w2g.wekanc.Cards.delete(w2g.prioBoardId,
-                        card.listPrioId,
-                        card.cardPrioId,
-                        function(err, _id){
-                            if (err != null) {
-                                console.log('Error deleting card '+_id);
-                            } else {
-                                w2g.updateIssue('issueId', issue.id, 'cardPrioId', null);
-                                w2g.updateIssue('issueId', issue.id, 'listPrioId', null);
-                            }
-                        });
-                }
-            });
+            w2g.db.get('SELECT c.*, l.prioListId AS newListId \
+                FROM cards AS c \
+                INNER JOIN labels AS l ON l.listId = c.listId \
+                WHERE c.issueId = ?', issue.id, function(err, data) {
+                    if ((err && has_prio) || (!err && has_prio && data && !data.cardPrioId)) {
+                        // Create card
+                        var boardId = w2g.prioBoardId;
+                        var listId = data.newListId;
+                        w2g.wekanc.Cards.create(issue.title,
+                            issue.body,
+                            boardId,
+                            listId, function(err, cardId) {
+                                if (err != null) {
+                                } else {
+                                    //Insert issue
+                                    w2g.insertIssue(issue.id,
+                                        body.repository.id,
+                                        issue.number,
+                                        null,
+                                        cardId,
+                                        null,
+                                        null,
+                                        listId);
+                                }
+                            });
+                    } else if (!err && !has_prio && data && data.cardPrioId) {
+                        // Delete card
+                        w2g.wekanc.Cards.delete(w2g.prioBoardId,
+                            data.listPrioId,
+                            data.cardPrioId,
+                            function(err, _id){
+                                if (err != null) {
+                                    console.log('Error deleting card '+_id);
+                                } else {
+                                    w2g.updateIssue('issueId', issue.id, 'cardPrioId', null);
+                                    w2g.updateIssue('issueId', issue.id, 'listPrioId', null);
+                                }
+                            });
+                    }
+                });
         }
     },
     deleteLabels: function(repoId, priority) {
