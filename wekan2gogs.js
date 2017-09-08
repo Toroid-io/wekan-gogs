@@ -66,7 +66,9 @@ var w2g = {
     },
     gogs: {
         parseHookPrio: function(body) {
-            if (body.issue && body.action === 'label_updated') {
+            if (body.issue &&
+                body.issue.pull_request == null &&
+                body.action === 'label_updated') {
                 w2g.gogs.label(body);
             }
         },
@@ -188,6 +190,7 @@ var w2g = {
                     username, repoName, w2g.kanLabels.other[0].name, function(err, row) { /* [0] is to-do */
                         if (!err) {
                             issues.forEach(function(issue) {
+                                if (issue.pull_request == null) {
                                 w2g.db.get('SELECT cardId FROM cards WHERE cards.issueId = ?',
                                     issue.id, function(err, card) {
                                         if (!err && (!card || card.cardId == null)) {
@@ -197,6 +200,7 @@ var w2g = {
                                             });
                                         }
                                     });
+                                }
                             });
                         } else {
                             console.log('Error getting data from database');
