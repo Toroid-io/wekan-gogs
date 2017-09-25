@@ -72,8 +72,8 @@ var w2g = {
             }
         },
         parseHook: function(body) {
-            if (body.issue) {
-                //w2g.gogs.issue(body);
+            if (body.issue && body.action === 'opened') {
+                w2g.gogs.newIssue(body);
             }
         },
         label: function(body) {
@@ -124,6 +124,11 @@ var w2g = {
                             });
                     }
                 });
+        },
+        newIssue: function(body) {
+            const repoId = body.repository.id;
+            const issue = body.issue;
+            w2g.newIssues(w2g.gogsc.user, body.repository.name, [issue]);
         }
     },
     deleteLabels: function(repoId, priority) {
@@ -183,31 +188,7 @@ var w2g = {
     syncIssues: function(username, repoName, page) {
         w2g.gogsc.Issues.getAll(username, repoName, page, function(err, issues) {
             if (!err) {
-                w2g.db.get('SELECT l.id AS labelId, \
-                l.listId, r.boardId, r.repoId \
-                FROM labels AS l \
-                INNER JOIN repos AS r \
-                ON r.username = ? AND r.repoName = ? \
-                WHERE l.labelName = ?',
-                    username, repoName, w2g.kanLabels.other[0].name, function(err, row) { /* [0] is to-do */
-                        if (!err) {
-                            issues.forEach(function(issue) {
-                                if (issue.pull_request == null) {
-                                w2g.db.get('SELECT cardId FROM cards WHERE cards.issueId = ?',
-                                    issue.id, function(err, card) {
-                                        if (!err && (!card || card.cardId == null)) {
-                                            w2g.gogsc.Labels.addIssueLabels(username, repoName, issue.number, [row.labelId]);
-                                            w2g.wekanc.Cards.create(issue.title, issue.body, row.boardId, row.listId, function(err, cardId) {
-                                                w2g.insertIssue(issue.id, row.repoId, issue.number, cardId, null, row.boardId, row.listId, null);
-                                            });
-                                        }
-                                    });
-                                }
-                            });
-                        } else {
-                            console.log('Error getting data from database');
-                        }
-                });
+                w2g.newIssues(username, repoName, issues);
             } else {
                 console.log('Error getting issues');
             }
@@ -225,6 +206,33 @@ var w2g = {
                 });
             }
         });
+    },
+    newIssues: function(username, repoName, issues) {
+        w2g.db.get('SELECT l.id AS labelId, \
+                l.listId, r.boardId, r.repoId \
+                FROM labels AS l \
+                INNER JOIN repos AS r \
+                ON r.username = ? AND r.repoName = ? \
+                WHERE l.labelName = ?',
+            username, repoName, w2g.kanLabels.other[0].name, function(err, row) { /* [0] is to-do */
+                if (!err) {
+                    issues.forEach(function(issue) {
+                        if (issue.pull_request == null) {
+                            w2g.db.get('SELECT cardId FROM cards WHERE cards.issueId = ?',
+                                issue.id, function(err, card) {
+                                    if (!err && (!card || card.cardId == null)) {
+                                        w2g.gogsc.Labels.addIssueLabels(username, repoName, issue.number, [row.labelId]);
+                                        w2g.wekanc.Cards.create(issue.title, issue.body, row.boardId, row.listId, function(err, cardId) {
+                                            w2g.insertIssue(issue.id, row.repoId, issue.number, cardId, null, row.boardId, row.listId, null);
+                                        });
+                                    }
+                                });
+                        }
+                    });
+                } else {
+                    console.log('Error getting data from database');
+                }
+            });
     },
     insertIssue: function(issueId, repoId, issueIndex, cardId, cardPrioId, boardId, listId, listPrioId) {
         w2g.db.run('INSERT OR REPLACE INTO cards VALUES (?,?,?, \

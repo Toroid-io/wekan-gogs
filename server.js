@@ -20,8 +20,7 @@ app.post('/gogs/priority', function (req, res) {
 });
 
 app.post('/gogs', function (req, res) {
-    //console.log(req.body);
-    //w2g.gogs.parseHook(req.body);
+    w2g.gogs.parseHook(req.body);
     res.status(200).send('OK');
 });
 
