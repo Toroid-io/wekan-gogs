@@ -38,6 +38,16 @@ var gogs = {
                 }
             });
         },
+        edit: function(username, repoName, issueNumber, data, cb) {
+            var opts = addToBody('/repos/'+username+'/'+repoName+'/issues/'+issueNumber, data);
+            request.patch(opts, function(err, res, body) {
+                if (err != null) {
+                    if (cb) cb(err, null);
+                } else {
+                    if (cb) cb(null, body);
+                }
+            });
+        },
         getAll: function(username, repoName, page, cb) {
             var opts = addToBody('/repos/'+username+'/'+repoName+'/issues?page='+page, {});
             request.get(opts, function(err, res, body) {
