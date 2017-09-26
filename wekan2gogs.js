@@ -61,6 +61,21 @@ var w2g = {
                         console.log('Error getting data from database');
                     }
                 });
+        },
+        createCard: function(hook, prio) {
+            if (!prio) {
+                const listId = hook.listId;
+                const boardId = hook.boardId;
+                const cardId = hook.cardId;
+                const title = hook.text.split('"')[1];
+                const user = hook.text.split(' ')[0];
+                w2g.newCard(cardId, listId, boardId, title, user);
+            }
+        },
+        archivedCard: function(hook, prio) {
+            const cardId = hook.cardId;
+            const user = hook.text.split(' ')[0];
+            w2g.delCard(cardId, user, prio);
         }
     },
     gogs: {
@@ -72,8 +87,10 @@ var w2g = {
             }
         },
         parseHook: function(body) {
-            if (body.issue) {
-                //w2g.gogs.issue(body);
+            if (body.issue && body.action === 'opened') {
+                w2g.gogs.newIssue(body);
+            } else if (body.issue && body.action === 'closed') {
+                w2g.gogs.closeIssue(body);
             }
         },
         label: function(body) {
@@ -124,6 +141,15 @@ var w2g = {
                             });
                     }
                 });
+        },
+        newIssue: function(body) {
+            const repoId = body.repository.id;
+            const issue = body.issue;
+            w2g.newIssues(w2g.gogsc.user, body.repository.name, [issue]);
+        },
+        closeIssue: function(body) {
+            const issueId = body.issue.id;
+            w2g.delIssue(issueId);
         }
     },
     deleteLabels: function(repoId, priority) {
@@ -183,31 +209,7 @@ var w2g = {
     syncIssues: function(username, repoName, page) {
         w2g.gogsc.Issues.getAll(username, repoName, page, function(err, issues) {
             if (!err) {
-                w2g.db.get('SELECT l.id AS labelId, \
-                l.listId, r.boardId, r.repoId \
-                FROM labels AS l \
-                INNER JOIN repos AS r \
-                ON r.username = ? AND r.repoName = ? \
-                WHERE l.labelName = ?',
-                    username, repoName, w2g.kanLabels.other[0].name, function(err, row) { /* [0] is to-do */
-                        if (!err) {
-                            issues.forEach(function(issue) {
-                                if (issue.pull_request == null) {
-                                w2g.db.get('SELECT cardId FROM cards WHERE cards.issueId = ?',
-                                    issue.id, function(err, card) {
-                                        if (!err && (!card || card.cardId == null)) {
-                                            w2g.gogsc.Labels.addIssueLabels(username, repoName, issue.number, [row.labelId]);
-                                            w2g.wekanc.Cards.create(issue.title, issue.body, row.boardId, row.listId, function(err, cardId) {
-                                                w2g.insertIssue(issue.id, row.repoId, issue.number, cardId, null, row.boardId, row.listId, null);
-                                            });
-                                        }
-                                    });
-                                }
-                            });
-                        } else {
-                            console.log('Error getting data from database');
-                        }
-                });
+                w2g.newIssues(username, repoName, issues);
             } else {
                 console.log('Error getting issues');
             }
@@ -225,6 +227,101 @@ var w2g = {
                 });
             }
         });
+    },
+    newIssues: function(username, repoName, issues) {
+        w2g.db.get('SELECT l.id AS labelId, \
+                l.listId, r.boardId, r.repoId \
+                FROM labels AS l \
+                INNER JOIN repos AS r \
+                ON r.username = ? AND r.repoName = ? \
+                WHERE l.labelName = ?',
+            username, repoName, w2g.kanLabels.other[0].name, function(err, row) { /* [0] is to-do */
+                if (!err) {
+                    issues.forEach(function(issue) {
+                        if (issue.pull_request == null) {
+                            w2g.db.get('SELECT cardId FROM cards WHERE cards.issueId = ?',
+                                issue.id, function(err, card) {
+                                    if (!err && (!card || card.cardId == null)) {
+                                        w2g.wekanc.Cards.create(issue.title, issue.body, row.boardId, row.listId, function(err, cardId) {
+                                            w2g.insertIssue(issue.id, row.repoId, issue.number, cardId, null, row.boardId, row.listId, null);
+                                            w2g.gogsc.Labels.addIssueLabels(username, repoName, issue.number, [row.labelId]);
+                                        });
+                                    }
+                                });
+                        }
+                    });
+                } else {
+                    console.log('Error getting data from database');
+                }
+            });
+    },
+    newCard: function(cardId, listId, boardId, cardTitle, author) {
+        w2g.db.get('SELECT l.id AS labelId, r.repoName, \
+            r.repoId, r.username \
+            FROM labels AS l \
+            INNER JOIN repos AS r \
+            ON r.boardId = ? \
+            WHERE l.listId = ?',
+            boardId, listId, function(err, row) { /* [0] is to-do */
+                if (!err) {
+                    w2g.db.get('SELECT issueId FROM cards WHERE cards.cardId = ?',
+                        cardId, function(err, issue) {
+                            if (!err && (!issue || issue.issueId == null)) {
+                                w2g.gogsc.Issues.create(w2g.gogsc.user, row.repoName, cardTitle,
+                                    '_Issue opened by **'+author+'** in Wekan_', function(err, data){
+                                        w2g.insertIssue(data.id, row.repoId, data.number, cardId, null, boardId, listId, null);
+                                        w2g.gogsc.Labels.addIssueLabels(row.username, row.repoName, data.number, [row.labelId]);
+                                });
+                            }
+                        });
+                } else {
+                    console.log('Error getting data from database');
+                }
+            });
+    },
+    delCard: function(cardId, author, prio) {
+        w2g.db.get('SELECT c.*, c.repoId, \
+            r.username, r.repoName FROM cards AS c \
+            INNER JOIN repos AS r ON r.repoId = c.repoId \
+            WHERE c.cardId = ? OR c.cardPrioId = ?',
+            cardId, cardId, function(err, row) {
+                if (!err && row.issueIndex) {
+                    w2g.gogsc.Issues.edit(row.username, row.repoName,
+                        row.issueIndex, {state: 'closed'});
+                } else {
+                    console.log('Error getting data from database');
+                }
+            });
+    },
+    delIssue: function(issueId) {
+        w2g.db.get('SELECT c.*, r.boardId \
+            FROM cards AS c \
+            INNER JOIN repos AS r ON r.repoId = c.repoId \
+            WHERE c.issueId = ?', issueId, function(err, row) {
+                if (!err) {
+                    if (row.cardId) {
+                        w2g.db.run('DELETE FROM cards WHERE cards.cardId = ?', row.cardId);
+                        w2g.wekanc.Cards.delete(row.boardId, row.listId, row.cardId);
+                    }
+                    if (row.cardPrioId) {
+                        w2g.db.run('DELETE FROM cards WHERE cards.cardPrioId = ?', row.cardId);
+                        w2g.wekanc.Cards.delete(w2g.prioBoardId, row.listPrioId, row.cardPrioId);
+                    }
+                    w2g.db.all('SELECT l.id, r.* \
+                        FROM labels AS l \
+                        INNER JOIN repos AS r ON r.repoId = l.repoId \
+                        WHERE l.repoId = ?', row.repoId, function(err, labels) {
+                        if (!err && labels) {
+                            labels.forEach(function(label) {
+                                w2g.gogsc.Labels.deleteIssueLabel(label.username,
+                                    label.repoName, row.issueIndex, label.id);
+                            });
+                        }
+                    })
+                } else {
+                    console.log('Error getting data from database');
+                }
+            });
     },
     insertIssue: function(issueId, repoId, issueIndex, cardId, cardPrioId, boardId, listId, listPrioId) {
         w2g.db.run('INSERT OR REPLACE INTO cards VALUES (?,?,?, \
