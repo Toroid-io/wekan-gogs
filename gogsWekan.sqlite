@@ -37,6 +37,13 @@ CREATE TABLE IF NOT EXISTS 'cards' (
 	PRIMARY KEY(issueId)
 );
 
+CREATE TABLE IF NOT EXISTS 'comments' (
+	'gcommentId'	integer,
+	'wcommentId'	varchar,
+	'cardId'	varchar,
+	PRIMARY KEY(gcommentId)
+);
+
 CREATE TABLE IF NOT EXISTS 'boards_prio' (
 	'wekan_userid'	varchar,
 	'boardId'	varchar,

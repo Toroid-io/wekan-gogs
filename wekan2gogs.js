@@ -67,15 +67,22 @@ var w2g = {
                 const listId = hook.listId;
                 const boardId = hook.boardId;
                 const cardId = hook.cardId;
-                const title = hook.text.split('"')[1];
-                const user = hook.text.split(' ')[0];
+                const title = hook.card;
+                const user = hook.user;
                 w2g.newCard(cardId, listId, boardId, title, user);
             }
         },
         archivedCard: function(hook, prio) {
             const cardId = hook.cardId;
-            const user = hook.text.split(' ')[0];
+            const user = hook.user;
             w2g.delCard(cardId, user, prio);
+        },
+        addComment: function(hook, prio) {
+            const cardId = hook.cardId;
+            const user = hook.user;
+            const comment = hook.comment;
+            const commentId = hook.commentId;
+            w2g.newWComment(cardId, commentId, user, comment);
         }
     },
     gogs: {
@@ -91,6 +98,8 @@ var w2g = {
                 w2g.gogs.newIssue(body);
             } else if (body.issue && body.action === 'closed') {
                 w2g.gogs.closeIssue(body);
+            } else if (body.comment && body.action === 'created') {
+                w2g.gogs.newComment(body);
             }
         },
         label: function(body) {
@@ -150,6 +159,14 @@ var w2g = {
         closeIssue: function(body) {
             const issueId = body.issue.id;
             w2g.delIssue(issueId);
+        },
+        newComment: function(body) {
+            const repoId = body.repository.id;
+            const issueId = body.issue.id;
+            const guser = body.comment.user.username;
+            const gcommentId = body.comment.id;
+            const gcomment = body.comment.body;
+            w2g.newGComment(repoId, issueId, gcommentId, guser, gcomment);
         }
     },
     deleteLabels: function(repoId, priority) {
@@ -255,12 +272,59 @@ var w2g = {
                 }
             });
     },
+    newGComment: function(repoId, issueId, gcommentId, guser, gcomment) {
+        const commentBody = '_**'+guser+'** commented in Gogs:_\n\n>'+gcomment;
+        w2g.db.get('SELECT c.cardId, c.cardPrioId, \
+            r.boardId \
+            FROM cards AS c \
+            INNER JOIN repos AS r ON r.repoId = c.repoId \
+            INNER JOIN comments AS com ON com.cardId = c.cardId \
+            WHERE c.repoId = ?', repoId, function(err, row) {
+                if (!err) {
+                    w2g.db.get('SELECT wcommentId FROM comments WHERE gcommentId = ?',
+                        gcommentId, function(err, comment) {
+                            console.log(comment, row);
+                            if (!err && row && row.cardId && (!comment || !comment.wcommentId)) {
+                                w2g.wekanc.Comments.create(row.boardId, row.cardId, commentBody, function(err, wcommentId) {
+                                    w2g.db.run('INSERT INTO comments VALUES (?,?,?)',
+                                        gcomment.id, wcommentId, row.cardId);
+                                });
+                            }
+                        });
+                } else {
+                    console.log('Error getting data from database');
+                }
+            });
+    },
+    newWComment: function(cardId, wcommentId, wuser, wcomment) {
+        wcomment = wcomment.replace(/\n/g, '\n\n>');
+        const commentBody = '_**'+wuser+'** commented in Wekan:_\n\n>'+wcomment;
+        w2g.db.get('SELECT c.issueIndex, c.issueId, c.cardId, \
+            r.username, r.repoName \
+            FROM cards AS c \
+            INNER JOIN repos AS r ON r.repoId = c.repoId \
+            WHERE c.cardId = ? OR c.cardPrioId = ?', cardId, cardId, function(err, row) {
+                if (!err) {
+                    w2g.db.get('SELECT gcommentId FROM comments WHERE wcommentId = ?',
+                        wcommentId, function(err, comment) {
+                            console.log(comment, row);
+                            if (!err && row && row.issueIndex && (!comment || !comment.gcommentId)) {
+                                w2g.gogsc.Comments.create(row.username, row.repoName, row.issueIndex, commentBody, function(err, gcomment) {
+                                    w2g.db.run('INSERT INTO comments VALUES (?,?,?)',
+                                        gcomment.id, wcommentId, row.cardId);
+                                });
+                            }
+                        });
+                } else {
+                    console.log('Error getting data from database');
+                }
+            });
+    },
     newCard: function(cardId, listId, boardId, cardTitle, author) {
         w2g.db.get('SELECT l.id AS labelId, r.repoName, \
             r.repoId, r.username \
             FROM labels AS l \
-            INNER JOIN repos AS r \
-            ON r.boardId = ? \
+            INNER JOIN repos AS r ON r.boardId = ? \
             WHERE l.listId = ?',
             boardId, listId, function(err, row) { /* [0] is to-do */
                 if (!err) {
