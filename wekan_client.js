@@ -121,6 +121,21 @@ var wekan = {
 
         }
     },
+    Comments: {
+        create: function(boardId, cardId, comment, cb) {
+            var opts = addToBody('/api/boards/'+boardId+'/cards/'+cardId+'/comments', {
+                comment: comment,
+                authorId: wekan.adminId
+            });
+            request.post(opts, function(err, res, body) {
+                if (err != null) {
+                    if (cb) cb(err, null);
+                } else {
+                    if (cb) cb(null, body._id);
+                }
+            });
+        }
+    },
     Integrations: {
         create: function(boardId, url, cb) {
             var opts = addToBody('/api/boards/'+boardId+'/integrations', {
