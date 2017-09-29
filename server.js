@@ -1,7 +1,13 @@
 var express = require('express');
 var morgan = require('morgan');
 var bodyParser = require('body-parser');
-var w2g = require('./wekan2gogs.js')(function(err) {
+
+var noCli = false;
+if (process.argv[2] === 'no-cli') {
+    noCli = true;
+}
+
+var w2g = require('./wekan2gogs.js')(noCli, function(err) {
     if (err) {
         console.log(err);
         process.exit(1);

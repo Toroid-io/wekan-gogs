@@ -496,7 +496,7 @@ var w2g = {
     }
 };
 
-module.exports = function(cb) {
+module.exports = function(noCli, cb) {
     // Create or open DB
     w2g.db = new sqlite3.Database('gogsWekan.db',
         sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
@@ -528,6 +528,9 @@ module.exports = function(cb) {
                 }
                 w2g.saveGogsToken(token);
             });
+        }
+        if(noCli){
+            return;
         }
         var cli = require('./cli.js')(w2g);
         cli.show();
