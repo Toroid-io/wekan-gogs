@@ -1,4 +1,4 @@
 node_modules
-gogsWekan.db
+wekan-gogs.db
 package-lock.json
 *.swp

@@ -562,7 +562,7 @@ var w2g = {
 
 module.exports = function(config, cb) {
     // Create or open DB
-    w2g.db = new sqlite3.Database('gogsWekan.db',
+    w2g.db = new sqlite3.Database('wekan-gogs.db',
         sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
         function(err) {
             if (err != null) {
@@ -594,7 +594,7 @@ module.exports = function(config, cb) {
     }
     w2g.db.get('SELECT * FROM auth', function(err, row) {
         if (!err && (!row || !row.gogs_token)) {
-            w2g.gogsc.Users.createToken('Wekan2Gogs', function(err, token) {
+            w2g.gogsc.Users.createToken('wekan-gogs', function(err, token) {
                 if (err) {
                     if (cb) cb('Error registering app with gogs!');
                 }
