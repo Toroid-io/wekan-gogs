@@ -1,45 +1,42 @@
-var express = require('express');
-var morgan = require('morgan');
-var bodyParser = require('body-parser');
+var express = require('express')
+  , morgan = require('morgan')
+  , bodyParser = require('body-parser');
 
-var noCli = false;
-if (process.argv[2] === 'no-cli') {
-    noCli = true;
-}
+var run = function(w2g) {
 
-var w2g = require('./wekan2gogs.js')(noCli, function(err) {
-    if (err) {
-        console.log(err);
-        process.exit(1);
-    }
-});
+    const port = 7654;
+    var app = express();
 
-const port = 7654;
-var app = express();
+    app.use(morgan('dev')); //Logging
+    app.use(bodyParser.json());
 
-app.use(morgan('dev')); //Logging
-app.use(bodyParser.json());
+    app.post('/gogs/priority', function (req, res) {
+        w2g.gogs.parseHookPrio(req.body);
+        res.status(200).send('OK');
+    });
 
-app.post('/gogs/priority', function (req, res) {
-    w2g.gogs.parseHookPrio(req.body);
-    res.status(200).send('OK');
-});
+    app.post('/gogs', function (req, res) {
+        console.log(req.body);
+        w2g.gogs.parseHook(req.body);
+        res.status(200).send('OK');
+    });
 
-app.post('/gogs', function (req, res) {
-    w2g.gogs.parseHook(req.body);
-    res.status(200).send('OK');
-});
+    app.post('/wekan/priority', function (req, res) {
+        w2g.wekan.parseHook(req.body, true);
+        res.status(200).send('OK');
+    });
 
-app.post('/wekan/priority', function (req, res) {
-    w2g.wekan.parseHook(req.body, true);
-    res.status(200).send('OK');
-});
+    app.post('/wekan', function (req, res) {
+        console.log(req.body);
+        w2g.wekan.parseHook(req.body, false);
+        res.status(200).send('OK');
+    });
 
-app.post('/wekan', function (req, res) {
-    w2g.wekan.parseHook(req.body, false);
-    res.status(200).send('OK');
-});
+    app.listen(port, function() {
+        console.log('Listening on port '+port);
+    });
+};
 
-app.listen(port, function() {
-    console.log('Listening on port '+port);
-});
+module.exports = {
+    run: run
+};

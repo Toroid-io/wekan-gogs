@@ -244,14 +244,13 @@ var gogs = {
     }
 };
 
-module.exports = function(baseUrl, user, pass, token) {
+module.exports = function(baseUrl, user, pass) {
     gogs.baseUrl = baseUrl;
-    if ((!user || !pass) && !token) {
-        console.log('user/pass or token must be set!');
+    if (!user || !pass) {
+        console.log('user/pass must be set');
         return null;
     }
     gogs.user = user;
     gogs.pass = pass;
-    gogs.token = token;
     return gogs;
 };
