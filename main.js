@@ -28,7 +28,7 @@ config.wekan_username = process.env.WG_WEKAN_USERNAME;
 config.wekan_password = process.env.WG_WEKAN_PASSWORD;
 config.wekangogs_url = process.env.WG_URL;
 
-var w2g = require('./wekan2gogs.js')(config, function(err) {
+var w2g = require('./wekan-gogs.js')(config, function(err) {
     if (err) {
         console.log(err);
         process.exit(1);
