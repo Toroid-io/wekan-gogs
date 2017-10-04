@@ -1,4 +1,6 @@
-var sqlite3 = require('sqlite3');
+var fs = require('fs')
+  , ini = require('ini')
+  , sqlite3 = require('sqlite3');
 
 var w2g = {
     url: null,
@@ -449,8 +451,9 @@ var w2g = {
                 }
             });
     },
-    saveGogsToken: function(token) {
-        w2g.db.run('UPDATE auth SET gogs_token = ?', token);
+    saveGogsToken: function(config) {
+        w2g.db.run('UPDATE auth SET gogs_token = ?', config.gogs_token);
+        fs.writeFileSync('./wekan-gogs.ini', ini.stringify(config));
     },
     getLabel: function(searchKey, searchValue, cb) {
         w2g.db.get('SELECT * FROM labels WHERE '+searchKey+' = ?',
@@ -560,7 +563,7 @@ var w2g = {
     }
 };
 
-module.exports = function(noCli, cb) {
+module.exports = function(config, cb) {
     // Create or open DB
     w2g.db = new sqlite3.Database('gogsWekan.db',
         sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
@@ -571,102 +574,43 @@ module.exports = function(noCli, cb) {
         });
     w2g.db.serialize(); //sticky
 
-    var init = function(gurl, gusr, gpass, gtoken, wurl, wusr, wpass) {
-        w2g.wekanc = require('./wekan_client.js')(wurl, wusr, wpass,
-            function(err) {
-                if (!err) {
-                    w2g.setupPrioBoard(function(err) {/* TODO */});
-                }
-            });
-        w2g.gogsc = require('./gogs_client.js')(gurl, gusr, gpass, gtoken);
-        if (!w2g.wekanc) {
-            if (cb) cb('Error initializing wekan client!');
-        }
-        if (!w2g.gogsc) {
-            if (cb) cb('Error initializing gogs client!');
-        }
-        if (!gtoken) {
-            w2g.gogsc.Users.createToken('Wekan2Gogs', function(err, token) {
-                if (err) {
-                    if (cb) cb('Error registering app with gogs!');
-                }
-                w2g.saveGogsToken(token);
-            });
-        }
-        if(noCli){
-            return;
-        }
-        var cli = require('./cli.js')(w2g);
-        cli.show();
-    };
+    var wurl = config.wekan_url;
+    var wuser = config.wekan_username;
+    var wpass = config.wekan_password;
+    var gurl = config.gogs_url;
+    var guser = config.gogs_username;
+    var gpass = config.gogs_password;
+    var gtoken = config.gogs_token;
 
-    // Get usr && pass from database, or prompt user input
-    w2g.db.get('SELECT * FROM auth', function(err, row) {
-        if (!err && row) {
-            // Full info in database
-            console.log('Found credentials in database!');
-            w2g.url = row.w2g_url;
-            init(row.gogs_url, row.gogs_username,
-                row.gogs_password, row.gogs_token,
-                row.wekan_url, row.wekan_username,
-                row.wekan_password);
-        } else {
-            // Missing data, prompt user input
-            var prompt = require('prompt');
-            var schema = {
-                properties: {
-                    gogs_url: {
-                        required: true
-                    },
-                    gogs_username: {
-                        required: true
-                    },
-                    gogs_password: {
-                        required: true,
-                        hidden: true
-                    },
-                    wekan_url: {
-                        required: true
-                    },
-                    wekan_username: {
-                        required: true
-                    },
-                    wekan_password: {
-                        required: true,
-                        hidden: true
-                    },
-                    w2g_url: {
-                        required: true
-                    }
-                }
-            };
-            prompt.start();
-            prompt.get(schema, function (err, result) {
-                if (err != null) {
-                    if (cb) cb('Error reading credentials!');
-                }
-                w2g.db.run('INSERT INTO auth (gogs_url, gogs_username, \
-                gogs_password, wekan_url, wekan_username, \
-                wekan_password, w2g_url) VALUES \
-                (?,?,?,?,?,?,?)', result.gogs_url,
-                    result.gogs_username,
-                    result.gogs_password,
-                    result.wekan_url,
-                    result.wekan_username,
-                    result.wekan_password,
-                    result.w2g_url);
+    w2g.url = config.wekangogs_url;
+    w2g.wekanc = require('./wekan_client.js')(wurl, wuser, wpass,
+        function(err) {
+            if (!err) {
+                w2g.setupPrioBoard(function(err) {/* TODO */});
+            }
+        });
+    w2g.gogsc = require('./gogs_client.js')(gurl, guser, gpass, gtoken);
+    if (!w2g.wekanc) {
+        if (cb) cb('Error initializing wekan client!');
+    }
+    if (!w2g.gogsc) {
+        if (cb) cb('Error initializing gogs client!');
+    }
+    if (!gtoken) {
+        w2g.gogsc.Users.createToken('Wekan2Gogs', function(err, token) {
+            if (err) {
+                if (cb) cb('Error registering app with gogs!');
+            }
+            config.gogs_token = token;
+            w2g.saveGogsToken(config);
+        });
+    }
 
-                w2g.url = result.w2g_url;
-                init(result.gogs_url,
-                    result.gogs_username,
-                    result.gogs_password,
-                    null,
-                    result.wekan_url,
-                    result.wekan_username,
-                    result.wekan_password);
-            });
-        }
-    });
+    if(!config.cli){
+        return w2g;
+    }
+    var cli = require('./cli.js')(w2g);
+    cli.show();
 
     return w2g;
 };
