@@ -1,6 +1,4 @@
-var fs = require('fs')
-  , ini = require('ini')
-  , sqlite3 = require('sqlite3');
+var sqlite3 = require('sqlite3');
 
 var w2g = {
     url: null,
@@ -451,9 +449,8 @@ var w2g = {
                 }
             });
     },
-    saveGogsToken: function(config) {
-        w2g.db.run('UPDATE auth SET gogs_token = ?', config.gogs_token);
-        fs.writeFileSync('./wekan-gogs.ini', ini.stringify(config));
+    saveGogsToken: function(token) {
+        w2g.db.run('INSERT INTO auth VALUES (?)', token);
     },
     getLabel: function(searchKey, searchValue, cb) {
         w2g.db.get('SELECT * FROM labels WHERE '+searchKey+' = ?',
@@ -580,7 +577,6 @@ module.exports = function(config, cb) {
     var gurl = config.gogs_url;
     var guser = config.gogs_username;
     var gpass = config.gogs_password;
-    var gtoken = config.gogs_token;
 
     w2g.url = config.wekangogs_url;
     w2g.wekanc = require('./wekan_client.js')(wurl, wuser, wpass,
@@ -589,22 +585,28 @@ module.exports = function(config, cb) {
                 w2g.setupPrioBoard(function(err) {/* TODO */});
             }
         });
-    w2g.gogsc = require('./gogs_client.js')(gurl, guser, gpass, gtoken);
+    w2g.gogsc = require('./gogs_client.js')(gurl, guser, gpass);
     if (!w2g.wekanc) {
         if (cb) cb('Error initializing wekan client!');
     }
     if (!w2g.gogsc) {
         if (cb) cb('Error initializing gogs client!');
     }
-    if (!gtoken) {
-        w2g.gogsc.Users.createToken('Wekan2Gogs', function(err, token) {
-            if (err) {
-                if (cb) cb('Error registering app with gogs!');
-            }
-            config.gogs_token = token;
-            w2g.saveGogsToken(config);
-        });
-    }
+    w2g.db.get('SELECT * FROM auth', function(err, row) {
+        if (!err && (!row || !row.gogs_token)) {
+            w2g.gogsc.Users.createToken('Wekan2Gogs', function(err, token) {
+                if (err) {
+                    if (cb) cb('Error registering app with gogs!');
+                }
+                w2g.gogsc.token = token;
+                w2g.saveGogsToken(token);
+            });
+        } else if (!err) {
+            w2g.gogsc.token = row.gogs_token;
+        } else {
+            console.log('Error getting data from database');
+        }
+    });
 
     if(!config.cli){
         return w2g;

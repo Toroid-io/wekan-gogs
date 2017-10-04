@@ -1,15 +1,8 @@
 /* This script creates an initial DB, with default configurations */
 
 CREATE TABLE IF NOT EXISTS 'auth' (
-	'gogs_url'		varchar,
-	'gogs_username'		varchar,
-	'gogs_password'		varchar,
 	'gogs_token'		varchar,
-	'wekan_url'		varchar,
-	'wekan_username'	varchar,
-	'wekan_password'	varchar,
-	'w2g_url'		varchar,
-	PRIMARY KEY(gogs_username)
+	PRIMARY KEY(gogs_token)
 );
 
 CREATE TABLE IF NOT EXISTS 'repos' (
