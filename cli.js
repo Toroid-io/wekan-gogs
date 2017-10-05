@@ -102,7 +102,6 @@ vorpal
     .command('activate <username> <repo>', 'Activate repository')
     .option('-p, --priority', 'Activate repo in priority board')
     .action(function(args, callback) {
-        var console = this;
         var url = (args.options.priority)?w2g.url+'/gogs/priority':w2g.url+'/gogs';
         w2g.db.get('SELECT * FROM repos WHERE username = ? AND repoName = ?',
             args.username, args.repo, function(err, repo) {
@@ -126,7 +125,6 @@ vorpal
                 w2g.gogsc.Webhooks.createWebhook(args.username,
                     args.repo, url, function(err, hook) {
                         if (!err) {
-                            callback();
                             var updateKey = args.options.priority?'active_prio':'active';
                             w2g.updateRepo('repoId', repo.repoId, updateKey, 1);
                             updateKey = args.options.priority?'hook_prioId':'hookId';
