@@ -1,4 +1,4 @@
-from mhart/alpine-node:8
+from mhart/alpine-node:7
 
 RUN apk add --update \
     sqlite \
