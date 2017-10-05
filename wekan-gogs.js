@@ -152,9 +152,8 @@ var w2g = {
                 });
         },
         newIssue: function(body) {
-            const repoId = body.repository.id;
             const issue = body.issue;
-            w2g.newIssues(w2g.gogsc.user, body.repository.name, [issue]);
+            w2g.newIssues(body.repository.owner.username, body.repository.name, [issue]);
         },
         closeIssue: function(body) {
             const issueId = body.issue.id;
