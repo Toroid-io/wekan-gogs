@@ -260,8 +260,12 @@ var w2g = {
                                 issue.id, function(err, card) {
                                     if (!err && (!card || card.cardId == null)) {
                                         w2g.wekanc.Cards.create(issue.title, issue.body, row.boardId, row.listId, function(err, cardId) {
-                                            w2g.insertIssue(issue.id, row.repoId, issue.number, cardId, null, row.boardId, row.listId, null);
-                                            w2g.gogsc.Labels.addIssueLabels(username, repoName, issue.number, [row.labelId]);
+                                            if (!err) {
+                                                w2g.insertIssue(issue.id, row.repoId, issue.number, cardId, null, row.boardId, row.listId, null);
+                                                w2g.gogsc.Labels.addIssueLabels(username, repoName, issue.number, [row.labelId]);
+                                            } else {
+                                                console.log('Error creating card', err);
+                                            }
                                         });
                                     }
                                 });
@@ -331,7 +335,7 @@ var w2g = {
                     w2g.db.get('SELECT issueId FROM cards WHERE cards.cardId = ?',
                         cardId, function(err, issue) {
                             if (!err && (!issue || issue.issueId == null)) {
-                                w2g.gogsc.Issues.create(w2g.gogsc.user, row.repoName, cardTitle,
+                                w2g.gogsc.Issues.create(row.username, row.repoName, cardTitle,
                                     '_Issue opened by **'+author+'** in Wekan_', function(err, data){
                                         w2g.insertIssue(data.id, row.repoId, data.number, cardId, null, boardId, listId, null);
                                         w2g.gogsc.Labels.addIssueLabels(row.username, row.repoName, data.number, [row.labelId]);
@@ -562,7 +566,7 @@ var w2g = {
 
 module.exports = function(config, cb) {
     // Create or open DB
-    w2g.db = new sqlite3.Database('wekan-gogs.db',
+    w2g.db = new sqlite3.Database('data/wekan-gogs.db',
         sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
         function(err) {
             if (err != null) {
@@ -609,10 +613,10 @@ module.exports = function(config, cb) {
     });
 
     if(!config.cli){
-        return w2g;
+        cb(null, w2g);
     }
     var cli = require('./cli.js')(w2g);
     cli.show();
 
-    return w2g;
+    cb(null, w2g);
 };

@@ -2,3 +2,4 @@ node_modules
 wekan-gogs.db
 package-lock.json
 *.swp
+docker-compose.yml
