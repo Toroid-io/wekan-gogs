@@ -335,7 +335,7 @@ var w2g = {
                     w2g.db.get('SELECT issueId FROM cards WHERE cards.cardId = ?',
                         cardId, function(err, issue) {
                             if (!err && (!issue || issue.issueId == null)) {
-                                w2g.gogsc.Issues.create(w2g.gogsc.user, row.repoName, cardTitle,
+                                w2g.gogsc.Issues.create(row.username, row.repoName, cardTitle,
                                     '_Issue opened by **'+author+'** in Wekan_', function(err, data){
                                         w2g.insertIssue(data.id, row.repoId, data.number, cardId, null, boardId, listId, null);
                                         w2g.gogsc.Labels.addIssueLabels(row.username, row.repoName, data.number, [row.labelId]);
