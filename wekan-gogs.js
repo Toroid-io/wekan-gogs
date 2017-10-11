@@ -171,7 +171,7 @@ var w2g = {
     deleteLabels: function(repoId, priority) {
         w2g.db.all('SELECT l.*, r.username, r.repoName \
             FROM labels AS l \
-            INNER JOIN repos AS r \
+            INNER JOIN repos AS r ON l.repoId = r.repoId \
             WHERE l.repoId = ? AND l.labelName LIKE ?',
             repoId, (priority?'%priority':'%'), function(err, row) {
                 if (!err) {
@@ -235,11 +235,17 @@ var w2g = {
         w2g.gogsc.Labels.getAll(username, repoName, function(err, labels) {
             if (!err) {
                 labels.forEach(function(el) {
-                    w2g.getLabel('labelName', el.name, function(err, row) {
-                        if (!err && row) {
-                            w2g.updateLabel('labelName', el.name, 'id', el.id);
-                        }
-                    });
+                    w2g.db.get('SELECT l.*, r.repoId FROM labels AS l \
+                    INNER JOIN repos AS r ON r.repoName = ? AND r.username = ? \
+                    WHERE l.labelName = ? AND l.repoId = r.repoId', repoName, username, el.name,
+                        function(err, row) {
+                            if (!err && row) {
+                                w2g.db.run('UPDATE labels SET id = ? \
+                                    WHERE labelName = ? AND repoId = ?', el.id, el.name, row.repoId);
+                            } else if (err) {
+                                console.log('Error getting data from database');
+                            }
+                        });
                 });
             }
         });
@@ -467,7 +473,7 @@ var w2g = {
             });
     },
     insertLabel: function(id, repoId, labelName, listId, prioListId) {
-        w2g.db.run('INSERT INTO labels VALUES (?,?,?,?,?)',
+        w2g.db.run('INSERT INTO labels VALUES (null, ?,?,?,?,?)',
             id, repoId, labelName, listId, prioListId);
     },
     updateLabel: function(searchKey, searchValue, updateKey, updateValue) {
