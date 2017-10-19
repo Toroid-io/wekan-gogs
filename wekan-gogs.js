@@ -255,7 +255,7 @@ var w2g = {
                 l.listId, r.boardId, r.repoId \
                 FROM labels AS l \
                 INNER JOIN repos AS r \
-                ON r.username = ? AND r.repoName = ? \
+                ON r.username = ? AND r.repoName = ? AND r.repoId = l.repoId \
                 WHERE l.labelName = ?',
             username, repoName, w2g.kanLabels.other[0].name, function(err, row) { /* [0] is to-do */
                 if (!err) {
