@@ -46,14 +46,21 @@ The moment you want to use the CLI, attach to the container using `docker
 attach {{container-name || container-id}}`. Don't forget to detach using `^P^Q`
 to avoid exiting the shell.
 
-For the moment no UI was developed, so all actions are run through a CLI.
+**For the moment no UI was developed, so all actions are run through a CLI.**
 
 ## User guide
+
+### First Run
 
 After you run wekan-gogs for the first time, an application is registered in
 Gogs and a Priority board is created in Wekan.
 
-First, you need to sync your repositories
+### Add a repository for synchronization
+
+wekan-gogs does not synchronize any repository by default. To activate
+the synchronization between repositories, follow these steps:
+
+#### Update the repository list
 
 ```
 wekan-gogs: sync repos
@@ -67,19 +74,7 @@ wekan-gogs: list
 └─────────────┴────────┴───────────────────┘
 ```
 
-Then you can activate the repo. This will create a board in Wekan named
-`repo_owner/repoName`. This will add a set of labels to the repository that
-match the lists in the newly created Board. For the moment there are four fixed
-lists:
-
-- `To Do`
-- `In Progress`
-- `Review`
-- `Done`
-
-The labels are intended to represent the state of the card in Wekan. Don't
-assign these labels in Gogs.
-
+#### Activate the synchronization for a repo
 ```
 wekan-gogs: activate andres test
 wekan-gogs: list
@@ -91,6 +86,19 @@ wekan-gogs: list
 │ andres/lala │        │                   │
 └─────────────┴────────┴───────────────────┘
 ```
+
+This will create a board in Wekan using the following convention
+`repo_owner/repoName`. Additionally, a set of labels to the repository that
+match the lists in the newly created Board is created. For the moment there are four fixed
+lists:
+
+- `To Do`
+- `In Progress`
+- `Review`
+- `Done`
+
+The labels are intended to represent the state of the card in Wekan. Don't
+assign these labels in Gogs.
 
 You can also activate the repository in priority mode. This will add a label
 `kan:Priority` to the repository. If you add that label to an issue, it will be
@@ -108,9 +116,13 @@ wekan-gogs: list
 └─────────────┴────────┴───────────────────┘
 ```
 
-Then, if you have open issues in the newly activated repository, you need to
-synchronise them. The current Gogs API paginates the results, so you need to
-provide the page you're fetching.
+#### Synchronize issues
+
+wekan-gogs will automatically synchronize the issues created **after**
+activating a specific repository. However, if you have open issues in a
+newly activated repository, you need to synchronise them manually. The
+current Gogs API paginates the results, so you need to provide the page
+you're fetching.
 
 ```
 wekan-gogs: sync issues andres test 1
@@ -119,7 +131,7 @@ wekan-gogs: sync issues andres test 1
 You should now see all your issues created as cards in the `To Do` list, and
 the corresponding label assigned to them.
 
-The CLI has a help menu, so do the commands themselves.
+### Need help?
 
 ```
 wekan-gogs: help
