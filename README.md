@@ -88,17 +88,17 @@ wekan-gogs: list
 ```
 
 This will create a board in Wekan using the following convention
-`repo_owner/repoName`. Additionally, a set of labels to the repository that
-match the lists in the newly created Board is created. For the moment there are four fixed
-lists:
+`repo_owner/repoName`. Additionally, a set of labels is created in the
+repository. These labels match the lists in the newly created Board and are
+assigned by `wekan-gogs` automatically upon card movement between lists. You
+should not assign one of these labels manually.
 
-- `To Do`
-- `In Progress`
-- `Review`
-- `Done`
+For the moment there are four fixed lists:
 
-The labels are intended to represent the state of the card in Wekan. Don't
-assign these labels in Gogs.
+- `To Do` (label `kan:To Do`)
+- `In Progress` (label `kan:In Progress`)
+- `Review` (label `kan:Review`)
+- `Done` (label `kan:Done`)
 
 You can also activate the repository in priority mode. This will add a label
 `kan:Priority` to the repository. If you add that label to an issue, it will be
