@@ -1,4 +1,9 @@
-## [Ureleased] -
+## [Unreleased] -
+### Added
+
+### Fixed
+
+## [0.1] - 2017-11-22
 ### Added
 - #16 Dockerfile
 
