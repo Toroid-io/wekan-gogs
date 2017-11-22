@@ -29,7 +29,7 @@ services:
       - WG_GOGS_URL=https://my-gogs.io
       - WG_GOGS_USERNAME=guser
       - WG_GOGS_PASSWORD=gpass
-      - WG_URL=http://172.19.0.1:7654
+      - WG_URL=http://172.19.0.1:7654 # wekan-gogs server URL
       - WG_CLI=true
     stdin_open: true
     tty: true
